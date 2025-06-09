@@ -1,0 +1,68 @@
+// Misc.
+$misc: (
+  z-index-base: 10000
+);
+
+// Duration.
+$duration: (
+  navPanel: 0.5s,
+  transition: 0.2s
+);
+
+// Size.
+$size: (
+  navPanel: 18em,
+  navPanel-short: 12em,
+  border-radius: 8px,
+  element-height: 2.75em,
+  element-margin: 2em
+);
+
+// Font.
+$font: (
+  family: (
+    'Lato',
+    Helvetica,
+    sans-serif
+  ),
+  family-fixed: (
+    'Courier New',
+    monospace
+  ),
+  weight: 300,
+  weight-bold: 300
+);
+
+// Palette.
+$palette: (
+  bg: #ffffff,
+  fg: #4a4a4a,
+  fg-bold: #000000,
+  fg-light: #757575,
+  alt-bg: #f5f5f5,
+  border: #e0e0e0,
+  border-bg: rgba(48, 54, 61, 0.035),
+  border2: #d0d0d0,
+  border2-bg: rgba(48, 54, 61, 0.1),
+  accent1: (
+    bg: #689aa0,
+    fg: mix(#689aa0, #000000, 25%),
+    fg-bold: #000000,
+    fg-light: mix(#689aa0, #000000, 40%),
+    border: rgba(0, 0, 0, 0.25),
+    border-bg: rgba(0, 0, 0, 0.075),
+    border2: rgba(0, 0, 0, 0.5),
+    border2-bg: rgba(0, 0, 0, 0.2)
+  ),
+
+  accent2: (
+    bg: #f5f5f5,
+    fg: mix(#f5f5f5, #000000, 25%),
+    fg-bold: #000000,
+    fg-light: mix(#f5f5f5, #000000, 40%),
+    border: #000000,
+    border-bg: rgba(48, 54, 61, 0.1),
+    border2: #000000,
+    border2-bg: rgba(48, 54, 61, 0.25)
+  )
+);

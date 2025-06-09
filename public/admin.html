@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Smart-Z - Administration</title>
+    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, user-scalable=no"
+    />
+    <meta name="admin-secret" content="motdepasse123" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/custom.css" />
+    <link rel="stylesheet" href="assets/css/admin.css" />
+    <link href="https://fonts.cdnfonts.com/css/thesignature" rel="stylesheet" />
+  </head>
+  <body class="is-preload">
+    <div id="wrapper">
+      <!-- Login Form -->
+      <section id="login-section" class="main">
+        <header class="major">
+          <h2>Connexion</h2>
+          <p>Connectez-vous pour accéder à l'administration.</p>
+        </header>
+        <div class="inner">
+          <form id="loginForm">
+            <div class="row gtr-uniform">
+              <div class="col-12">
+                <input type="text" id="email" placeholder="Identifiant" required />
+              </div>
+              <div class="col-12" style="position: relative;">
+                <input type="password" id="password" placeholder="Mot de passe" required />
+                <i class="fas fa-eye" id="togglePassword" style="position: absolute; right: 16px; top: 50%; cursor: pointer; color: #bdbdbd;"></i>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="button fit">Se connecter</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Admin Content (hidden by default) -->
+      <div id="admin-content" style="display: none;">
+      <!-- Header -->
+      <section id="header" class="alt">
+        <header>
+          <h1><a href="/index.html">Smart-Z</a></h1>
+          <p>Administration</p>
+        </header>
+        <nav id="nav">
+          <ul>
+            <li><a href="/index.html">Accueil</a></li>
+            <li><a href="/nous.html">Qui sommes-nous ?</a></li>
+            <li><a href="/mentions.html">Mentions légales</a></li>
+          </ul>
+        </nav>
+      </section>
+
+      <!-- Gestion des commandes -->
+      <section id="admin-orders" class="main">
+        <header class="major">
+          <h2>Commandes</h2>
+          <p>Consultez et gérez les commandes clients.</p>
+        </header>
+        <div class="inner">
+          <div class="category" id="nouvelles">
+            <h3>Nouvelles commandes</h3>
+            <div class="orders"></div>
+          </div>
+          <div class="category" id="encours">
+            <h3>En cours de traitement</h3>
+            <div class="orders"></div>
+          </div>
+          <div class="category" id="archivees">
+            <h3>
+              <span style="cursor: pointer;" onclick="toggleArchivedOrders()">
+                Archivées <i class="fas fa-chevron-down" id="archiveToggleIcon"></i>
+              </span>
+            </h3>
+            <div class="orders" id="archivedOrders" style="display: none"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Gestion des transactions Stripe -->
+      <section id="admin-section" class="main">
+        <header class="major">
+          <h2>Transactions Stripe</h2>
+          <p>Consultez les transactions et effectuez des remboursements.</p>
+        </header>
+        <div class="inner">
+          <!-- Boutons d'action -->
+          <div class="row gtr-uniform" style="margin-bottom: 2em">
+            <div class="col-12">
+              <button type="button" class="button fit" id="loadTransactionsBtn">
+                🔄 Charger les transactions
+              </button>
+            </div>
+          </div>
+          <div id="transactionActions" style="display: none;">
+            <div class="row gtr-uniform" style="margin-bottom: 2em; margin-top: 2em;">
+              <div class="col-6 col-12-xsmall">
+                <button type="button" class="button fit" id="viewDetailsBtn" disabled>
+                  👁️ Détails
+                </button>
+              </div>
+              <div class="col-6 col-12-xsmall">
+                <button type="button" class="button fit" id="refundBtn" disabled>
+                  💰 Remboursement
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tableau des transactions -->
+          <div class="table-wrapper">
+            <table class="alt" id="transactionsTable">
+              <thead>
+                <tr>
+                  <th style="width: 50px;"></th>
+                  <th>Client</th>
+                  <th>Date</th>
+                  <th>Montant</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Rempli dynamiquement -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Gestion des marques et modèles -->
+      <section id="admin-section" class="main">
+        <header class="major">
+          <h2>Marques et modèles</h2>
+          <p>Gérez les marques et modèles de téléphones.</p>
+        </header>
+
+        <div class="inner">
+          <div id="loading" class="loader"></div>
+          <!-- Ajouter une marque -->
+          <label class="label" for="newBrand" style="margin-bottom: 2.5em;">Ajouter une nouvelle marque :</label>
+          <div class="row gtr-uniform" style="margin-bottom: 1em">
+            <div class="col-8 col-12-xxsmall">
+              <input type="text" id="newBrand" placeholder="Nom de la marque" />
+            </div>
+            <div class="col-4 col-12-xxsmall">
+              <button id="addBrandBtn" style="width: 100%" onclick="addBrand()">
+                ✅ <span class="hide-on-mobile">Ajouter</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Ajouter un modèle -->
+          <label class="label" for="newModel" style="margin-bottom: 2.5em;">Ajouter un modèle :</label>
+          <div class="row gtr-uniform" style="margin-bottom: 1em">
+            <div class="col-8 col-12-xxsmall">
+              <input type="text" id="newModel" placeholder="Nom du modèle" />
+            </div>
+            <div class="col-4 col-12-xxsmall">
+              <button id="addModelBtn" style="width: 100%" onclick="addModel()">
+                ✅ <span class="hide-on-mobile">Ajouter</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Sélection d'une marque -->
+          <label class="label" for="brandSelect" style="margin-bottom: 2.5em;">Marque :</label>
+          <div class="row gtr-uniform">
+            <div class="col-8 col-12-xxsmall">
+              <select id="brandSelect">
+                <option value="">-- Sélectionner --</option>
+              </select>
+            </div>
+            <div class="col-4 col-12-xxsmall">
+              <button
+                id="deleteBrandBtn"
+                style="width: 100%"
+                onclick="deleteBrand()"
+              >
+                ❌ <span class="hide-on-mobile">Supprimer</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Liste des modèles -->
+          <ul id="modelList"></ul>
+        </div>
+      </section>
+
+      <!-- Gestion des codes promo -->
+      <section id="admin-section" class="main">
+        <header class="major">
+          <h2>Codes promo</h2>
+          <p>Gérez les codes promo.</p>
+        </header>
+        <ul class="actions" style="display: flex; justify-content: center">
+          <li>
+            <button
+              type="button"
+              class="button fit"
+              id="updatePromosBtn"
+              style="margin-bottom: 1em"
+            >
+              🔄 MAJ Codes promo
+            </button>
+          </li>
+        </ul>
+        <div class="table-wrapper" style="margin-bottom: 2em">
+          <table class="alt promo-table" id="promoTable">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Code promo</th>
+                <th>Nb</th>
+                <th>Actif</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rempli dynamiquement -->
+            </tbody>
+          </table>
+        </div>
+        <div class="promo-admin">
+          <div class="row gtr-uniform">
+
+            <!-- Choix de la promotion -->
+            <div class="col-6 col-12-xsmall">
+              <label for="promoSelect" class="label">Choix de la promotion :</label>
+              <select id="promoSelect">
+                <option value="">-- Sélectionner une promotion --</option>
+              </select>
+            </div>
+
+            <!-- Code promo (à droite) -->
+            <div class="col-6 col-12-xsmall">
+              <label for="promoCode" class="label">Code promo :</label>
+              <input type="text" id="promoCode" readonly value="SMARTZ5PC" />
+            </div>
+
+            <!-- Message de précision (à gauche) -->
+            <div class="col-6 col-12-xsmall">
+              <label for="promoMessage" class="label">Message de précision :</label>
+              <input type="text" id="promoMessage" placeholder="Ex : offre limitée aux 50 premiers clients" />
+            </div>
+
+            <!-- Afficher la promotion (à droite) -->
+            <div class="col-6 col-12-xsmall" style="display: flex; align-items: flex-end; gap: 1em; justify-content: center;">
+              <label for="promoToggle" class="switch-label" style="margin-bottom: 0">Afficher la promotion</label>
+              <div class="toggle-switch">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="promoToggle" />
+                  <div class="toggle-switch-background">
+                    <div class="toggle-switch-handle"></div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+      </section>
+    </div>
+
+    <!-- Bouton Déconnexion (affiché seulement si connecté) -->
+    <div id="logout-container" style="display:none; text-align:center; margin:2em 0 1em 0;">
+      <button id="logoutBtn" class="button small">Déconnexion</button>
+    </div>
+
+    <!-- Copyright -->
+    <div id="copyright">
+      &copy; 2024 Smart-Z | Tous droits réservés<br />
+      By
+      <span class="signature" style="font-family: 'Thesignature', cursive"
+        >Moriarty</span
+      >
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/browser.min.js"></script>
+    <script src="assets/js/breakpoints.min.js"></script>
+    <script src="assets/js/util.js"></script>
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/admin.js"></script>
+    <script src="assets/js/commandes.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/transactions.js"></script>
+  </body>
+</html>

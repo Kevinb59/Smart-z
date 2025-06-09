@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>Smart-Z - Coque personnalisée</title>
+    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, user-scalable=no"
+    />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/custom.css" />
+    <link href="https://fonts.cdnfonts.com/css/thesignature" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Pacifico|Lobster|Fredoka+One|Monoton|Great+Vibes|Satisfy|Shadows+Into+Light|Poiret+One|Dancing+Script|Amatic+SC|Baloo+2|Bangers|Cinzel|Courgette|Crafty+Girls|Permanent+Marker|Rock+Salt|Sacramento|Cookie|Covered+By+Your+Grace|Gloria+Hallelujah|Indie+Flower|Love+Ya+Like+A+Sister|Luckiest+Guy|Marck+Script|Passions+Conflict|Patrick+Hand|Pinyon+Script|Pompiere|Quicksand|Raleway|Righteous|Shadows+Into+Light+Two|Special+Elite|Ultra|Varela+Round|Yellowtail|Yeseva+One|Zilla+Slab|Allura|Architects+Daughter|Bad+Script|Bebas+Neue|Black+Ops+One|Chewy|Faster+One|Finger+Paint|Handlee|Knewave&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  </head>
+  <body class="is-preload">
+    <!-- Wrapper -->
+    <div id="wrapper">
+      <!-- Header -->
+      <section id="header">
+        <header>
+          <img src="images/logo-Smart-Z.png" alt="Smart-Z" class="logo-img" />
+          <p>
+            Commande de coque personnalisée<br />
+            Expédition sous 72h
+          </p>
+          <div class="scroll-down-container">
+            <i class="fa-regular fa-circle-down fa-beat-fade" style="font-size: 3em; color: #551f7e;" onclick="scrollToOrderForm()"></i>
+          </div>
+        </header>
+        <nav id="nav">
+          <ul>
+            <li><a href="index.html">Accueil</a></li>
+            <li><a href="nous.html">Qui sommes-nous ?</a></li>
+            <li><a href="mentions.html">Mentions légales</a></li>
+          </ul>
+        </nav>
+      </section>
+
+      <!-- Banner -->
+      <section id="banner">
+        <h3 class="h3-default">
+          Venez nous découvrir
+          et nous faire confiance
+          pour votre prochaine coque personnalisée.
+        </h3>
+        <ul class="actions special">
+          <li>
+            <a href="nous.html" class="button large">Qui sommes-nous ?</a>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Promo Code -->
+      <section style="text-align: center; padding: 2em;">
+        <div class="e-card playing">
+          <div class="image"></div>
+          <div class="wave"></div>
+          <div class="wave"></div>
+          <div class="wave"></div>
+          <div class="infotop">
+            <div style="margin-bottom: 1em; font-size:1em;"></div>
+            <div id="promoCode" class="promo-code"></div>
+            <div style="margin-top: 0.5em; font-size:0.7em; color:#e0e0e0;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Formulaire de commande -->
+      <section class="main style2" id="orderFormSection">
+        <h2><center>Formulaire de commande</center></h2>
+          <h4 style="margin-bottom: 3em;">Informations client</h4>
+          <form id="orderForm">
+            <div class="row gtr-uniform">
+              <div class="col-6 col-12-xxsmall">
+                <input type="text" name="firstName" id="firstName" placeholder="Prénom" required />
+              </div>
+              <div class="col-6 col-12-xxsmall">
+                <input type="text" name="lastName" id="lastName" placeholder="Nom" required />
+              </div>
+              <div class="col-6 col-12-xxsmall">
+                <input type="email" name="email" id="email" placeholder="Email" required />
+              </div>
+              <div class="col-6 col-12-xxsmall">
+                <input type="tel" name="phone" id="phone" placeholder="Téléphone" required />
+              </div>
+              <div class="col-12">
+                <input type="text" name="address" id="address" placeholder="Adresse" required />
+              </div>
+              <div class="col-12">
+                <input type="text" name="address2" id="address2" placeholder="Complément d'adresse" />
+              </div>
+              <div class="col-6 col-12-xxsmall">
+                <input type="text" name="city" id="city" placeholder="Ville" required />
+              </div>
+              <div class="col-6 col-12-xxsmall">
+                <input type="text" name="zipCode" id="zipCode" placeholder="Code postal" required />
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Conteneur principal pour tous les designs -->
+
+          <!-- Premier design (formulaire produit) -->
+          <section class="main style2 design-block">
+            <h4 style="margin-bottom: 1em;">Informations produit</h4>
+            <div id="designsContainer">
+            <form class="productForm custom-border" style="padding-top: 2.5em; margin-top: 1em;">
+              <div class="phonesContainer row gtr-uniform">
+
+                <!-- Marque -->
+                <div class="col-6 col-12-xxsmall">
+                  <select name="phoneBrand" class="phoneBrand" required>
+                    <option value="">Marque</option>
+                  </select>
+                </div>
+
+                <!-- Modèle -->
+                <div class="col-6 col-12-xxsmall">
+                  <select name="phoneModel" class="phoneModel" required disabled>
+                    <option value="">Modèle</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Bouton pour ajouter un autre téléphone -->
+              <div class="col-12" style="text-align: center;">
+                <div class="button-group" style="margin-top: 1em; margin-bottom: 1em; text-align: center; display: flex; justify-content: center;">
+                  <!-- BOUTON AJOUTER (s'ouvre vers la droite, icône à droite) -->
+                  <button class="Btn Btn-right Btn-green addPhoneButton">
+                    <div class="text2">Ajouter un téléphone</div>
+                    <div class="sign">
+                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white">
+                        <path
+                          d="M11 5a1 1 0 0 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"
+                          stroke="white"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </div>
+                  </button>
+
+                  <!-- BOUTON RETIRER (s'ouvre vers la gauche, icône à gauche) -->
+                  <button class="Btn Btn-left removePhoneButton">
+                    <div class="sign">
+                      <svg viewBox="0 0 16 16" fill="currentColor" height="18" width="18" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528ZM8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                      </svg>
+                    </div>
+                    <div class="text2">Retirer un téléphone</div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Bouton pour ajouter une image -->
+              <div class="col-12">
+                <label class="upload-label">
+                  <input
+                    type="file"
+                    name="imageUpload"
+                    class="imageUpload"
+                    accept="image/*"
+                    required
+                    style="display: none;"
+                  />
+                  <div class="image-preview"></div>
+                  <i class="fas fa-cloud-upload-alt"></i>
+                  <span>Ajoutez votre image ici</span>
+                  <span style="font-size: 0.8em">(Taille minimale recommandée : 1000 x 2000 px)</span>
+                </label>
+              </div>
+
+              <!-- Zone de texte personnalisé -->
+              <div class="col-12">
+                <textarea name="customText" id="customText" rows="2" placeholder="Votre texte personnalisé (optionnel)"></textarea>
+              </div>
+
+              <!-- Police personnalisée -->
+              <div class="col-7 col-12-xxsmall" style="margin: 0.5em 0 0.5em 0;">
+                <select name="fontChoice" id="fontChoice" placeholder="Police personnalisée"></select>
+              </div>
+
+              <!-- Quantité -->
+              <div class="col-5 col-12-xxsmall">
+                <input
+                  type="number"
+                  class="qty"
+                  name="quantity"
+                  id="quantity"
+                  min="1"
+                  required
+                  placeholder="Quantité"
+                />
+              </div>
+            </form>
+          </div>
+          </section>
+
+          <!-- Bouton pour ajouter un autre design -->
+          <div class="col-12" style="text-align: center;">
+            <div class="button-group" style="margin-top: 1em; margin-bottom: 1em; text-align: center; display: flex; justify-content: center;">
+              <!-- BOUTON AJOUTER (s'ouvre vers la droite, icône à droite) -->
+              <button class="Btn Btn-right Btn-green" id="addDesignButton">
+                <div class="text2">Ajouter un design</div>
+                <div class="sign">
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white">
+                    <path
+                      d="M11 5a1 1 0 0 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"
+                      stroke="white"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+              </button>
+
+              <!-- BOUTON RETIRER (s'ouvre vers la gauche, icône à gauche) -->
+              <button class="Btn Btn-left" id="removeDesignButton">
+                <div class="sign">
+                  <svg viewBox="0 0 16 16" fill="currentColor" height="18" width="18" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528ZM8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                  </svg>
+                </div>
+                <div class="text2">Retirer un design</div>
+              </button>
+            </div>
+          </div>
+
+        <!-- Finalisation de la commande -->
+        <section class="main style2">
+          <h4>Finalisation de la commande</h4>
+          <div style="text-align: center;">
+            <div class="checkbox-wrapper-46" style="display: inline-block; margin-bottom: 1.5em;">
+              <input type="checkbox" id="checkbox-cgv" class="inp-cbx" />
+              <label for="checkbox-cgv" class="cbx">
+                <span>
+                  <svg viewBox="0 0 12 10" height="10px" width="12px">
+                    <polyline points="1.5 6 4.5 9 10.5 1"></polyline>
+                  </svg>
+                </span>
+                <span>J'ai lu et j'accepte les <a href="mentions.html#cgv" style="color: #551f7e;">CGV</a></span>
+              </label>
+            </div>
+          </div>
+          <ul class="actions special">
+            <li>
+              <button class="animated-button" id="paymentButton" disabled>
+                <i class="fas fa-credit-card" style="margin-right: 8px;"></i>
+                <svg viewBox="0 0 24 24" class="arr-2" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"
+                  ></path>
+                </svg>
+                <span class="text">Payer maintenant</span>
+                <span class="circle"></span>
+                <svg viewBox="0 0 24 24" class="arr-1" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"
+                  ></path>
+                </svg>
+              </button>
+            </li>
+          </ul>
+        </section>
+      </section>
+
+      <!-- Footer -->
+      <section id="footer">
+        <h2>Contactez-nous</h2>
+        <p>
+          Nous sommes à votre écoute pour toute question ou commande.<br />
+          Contactez-nous par email ou par téléphone.
+        </p>
+        <form id="contactForm" action="#" method="post">
+          <div class="row gtr-uniform gtr-50">
+            <div class="col-6 col-12-xsmall">
+              <input type="text" name="name" id="name" placeholder="Nom" />
+            </div>
+            <div class="col-6 col-12-xsmall">
+              <input type="email" name="email" id="email" placeholder="Email" />
+            </div>
+            <div class="col-12">
+              <input
+                type="text"
+                name="subject"
+                id="subject"
+                placeholder="Sujet"
+              />
+            </div>
+            <div class="col-12">
+              <textarea
+                name="message"
+                id="message"
+                placeholder="Message"
+                rows="5"
+              ></textarea>
+            </div>
+            <div class="col-12">
+              <ul class="actions special">
+                <li><input type="submit" value="Envoyer" /></li>
+              </ul>
+            </div>
+          </div>
+        </form>
+        <ul class="icons">
+					<li><span class="icon brands fa-cc-visa"></span></li>
+          <li><span class="icon brands fa-stripe"></span></li>
+          <li><span class="icon brands fa-paypal"></span></li>
+          <li><span class="icon brands fa-apple-pay"></span></li>
+          <li><span class="icon brands fa-google-pay"></span></li>
+					<li><span class="icon brands fa-cc-mastercard"></span></li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- Copyright -->
+    <div id="copyright">
+      &copy; 2024 Smart-Z | Tous droits réservés<br />
+      By <span class="signature" style="font-family: 'Thesignature', cursive;">Moriarty</span>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/browser.min.js"></script>
+    <script src="assets/js/breakpoints.min.js"></script>
+    <script src="assets/js/util.js"></script>
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/uploadImage.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="assets/js/phoneBrandAndModel.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="assets/js/initCheckout.js"></script>
+    <script src="assets/js/fontChoice.js"></script>
+    <script src="assets/js/multiDesign.js"></script>
+    <script src="assets/js/quantityManager.js"></script>
+  </body>
+</html>

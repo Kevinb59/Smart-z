@@ -1,0 +1,20 @@
+{
+  "name": "smart-z-v2",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "description": "Projet Smart Z avec API Vercel",
+  "dependencies": {
+    "@vercel/node": "^3.0.0",
+    "dotenv": "^16.5.0",
+    "jsonwebtoken": "^9.0.0",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "stripe": "^18.2.1"
+  }
+}
