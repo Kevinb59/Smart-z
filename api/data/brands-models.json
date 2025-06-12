@@ -47,9 +47,7 @@
     "iPhone XR",
     "iPhone XS Max"
   ],
-  "Google": [
-    "Pixel 8A"
-  ],
+  "Google": ["Pixel 8A"],
   "Xiaomi": [
     "Mi 10T / 10T Pro",
     "Mi 10T Lite",
@@ -188,13 +186,7 @@
     "Note 9",
     "Note 9S / 9 Pro"
   ],
-  "Realme": [
-    "C11 2021",
-    "C21Y / C25Y",
-    "C31",
-    "C33",
-    "C35"
-  ],
+  "Realme": ["C11 2021", "C21Y / C25Y", "C31", "C33", "C35"],
   "Huawei": [
     "Mate 40",
     "Nova 7",

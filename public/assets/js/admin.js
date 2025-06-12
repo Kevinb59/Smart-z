@@ -30,6 +30,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     deleteBrandBtn.disabled = !selected
     updateModelList() // Met à jour la liste des modèles
   })
+
+  // Ajoute un écouteur sur tous les selects de statut de commande
+  document.body.addEventListener('change', async function (e) {
+    if (e.target.classList.contains('status-select')) {
+      const orderId = e.target.getAttribute('data-id')
+      const newStatus = e.target.value
+      e.target.disabled = true
+      try {
+        await updateOrderStatus(orderId, newStatus)
+        alert('Statut mis à jour dans la base de données.')
+        await fetchOrders() // Recharge l'affichage si besoin
+      } catch (err) {
+        alert('Erreur lors de la mise à jour du statut.')
+      }
+      e.target.disabled = false
+    }
+  })
 })
 
 // ====================
@@ -37,8 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ====================
 async function loadData(selectedBrand = null) {
   try {
-    const response = await fetch(API_BRANDS_MODELS)
-    const data = await response.json()
+    const data = await fetchBrandsAndModels()
     allData = data // Stocke les données récupérées
     const select = document.getElementById('brandSelect')
     const loading = document.getElementById('loading')
@@ -85,111 +101,20 @@ function updateModelList() {
 }
 
 // ====================
-// AJOUT D'UNE MARQUE
+// GESTION DES COMMANDES (STATUT)
 // ====================
-window.addBrand = async function addBrand() {
-  const marque = document.getElementById('newBrand').value.trim()
-  if (!marque) return alert('Veuillez entrer un nom de marque.')
-  if (!confirm(`Confirmer l'ajout de la marque "${marque}" ?`)) return
-
-  const res = await fetch(API_BRANDS_MODELS, {
-    method: 'POST',
-    body: JSON.stringify({ type: 'addBrand', marque }),
-    headers: { 'Content-Type': 'application/json' }
-  })
-  const data = await res.json()
-  alert(data.message || data.error)
-
-  // Ajout dynamique
-  allData[marque] = []
-  const select = document.getElementById('brandSelect')
-  const option = document.createElement('option')
-  option.value = marque
-  option.textContent = marque
-  select.appendChild(option)
-  select.value = marque
-  document.getElementById('newBrand').value = '' // Réinitialise le champ de saisie
-  select.dispatchEvent(new Event('change')) // Déclenche l'événement de changement
+async function fetchOrders() {
+  const snapshot = await db.collection('commandes').get()
+  return snapshot.docs.map((doc) => doc.data())
 }
-
-// ====================
-// SUPPRESSION D'UNE MARQUE
-// ====================
-window.deleteBrand = async function deleteBrand() {
-  const select = document.getElementById('brandSelect')
-  const marque = select.value
-  if (!marque) return
-  if (!confirm(`Confirmer la suppression de la marque "${marque}" ?`)) return
-
-  const res = await fetch(API_BRANDS_MODELS, {
+async function updateOrderStatus(orderId, newStatus) {
+  await db.collection('commandes').doc(orderId).update({ status: newStatus })
+  // Appel API pour envoyer un mail au client (adapter l'URL si besoin)
+  await fetch('/api/send-status-mail', {
     method: 'POST',
-    body: JSON.stringify({ type: 'deleteBrand', marque }),
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId, newStatus })
   })
-  const data = await res.json()
-  alert(data.message || data.error)
-
-  // Suppression dynamique
-  delete allData[marque]
-  const idx = select.selectedIndex
-  select.remove(idx)
-  select.value = ''
-  select.dispatchEvent(new Event('change')) // Déclenche l'événement de changement
-}
-
-// ====================
-// AJOUT D'UN MODÈLE
-// ====================
-window.addModel = async function addModel() {
-  const marque = document.getElementById('brandSelect').value
-  const modele = document.getElementById('newModel').value.trim()
-  if (!marque || !modele) return
-  if (
-    !confirm(
-      `Confirmer l'ajout du modèle "${modele}" à la marque "${marque}" ?`
-    )
-  )
-    return
-
-  const res = await fetch(API_BRANDS_MODELS, {
-    method: 'POST',
-    body: JSON.stringify({ type: 'addModel', marque, modele }),
-    headers: { 'Content-Type': 'application/json' }
-  })
-  const data = await res.json()
-  alert(data.message || data.error)
-
-  // Ajout dynamique
-  if (!allData[marque]) allData[marque] = []
-  allData[marque].push(modele)
-  updateModelList() // Met à jour la liste des modèles
-  document.getElementById('newModel').value = '' // Réinitialise le champ de saisie
-}
-
-// ====================
-// SUPPRESSION D'UN MODÈLE
-// ====================
-window.deleteModel = async function deleteModel(marque, modele) {
-  if (
-    !confirm(
-      `Confirmer la suppression du modèle "${modele}" de la marque "${marque}" ?`
-    )
-  )
-    return
-
-  const res = await fetch(API_BRANDS_MODELS, {
-    method: 'POST',
-    body: JSON.stringify({ type: 'deleteModel', marque, modele }),
-    headers: { 'Content-Type': 'application/json' }
-  })
-  const data = await res.json()
-  alert(data.message || data.error)
-
-  // Suppression dynamique
-  if (allData[marque]) {
-    allData[marque] = allData[marque].filter((m) => m !== modele)
-    updateModelList() // Met à jour la liste des modèles
-  }
 }
 
 // ====================
@@ -326,31 +251,10 @@ const API_PROMO_CODES = '/api/promo-codes' // URL de l'API pour les codes promo
 const API_PROMO_BANNER = '/api/promo-banner' // URL de l'API pour la bannière promo
 
 async function loadPromoAdmin() {
-  const token = localStorage.getItem('token')
   // Charger les codes
-  let codes = null
-  try {
-    const res = await fetch(API_PROMO_CODES, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (!res.ok) throw new Error('Erreur API promo-codes: ' + res.status)
-    codes = await res.json()
-  } catch (e) {
-    console.error('Erreur lors du chargement des codes promo:', e)
-    return // Stop si erreur
-  }
-  if (!codes || codes.error) return // Stop si erreur ou vide
+  let codes = await fetchPromoCodes()
   // Charger la bannière
-  let banner = {}
-  try {
-    const bannerRes = await fetch(API_PROMO_BANNER, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (bannerRes.ok) banner = await bannerRes.json()
-  } catch (e) {
-    banner = {}
-  }
-
+  let banner = await fetchPromoBanner()
   const select = document.getElementById('promoSelect')
   select.innerHTML =
     '<option value="">-- Sélectionner une promotion --</option>'
@@ -365,14 +269,14 @@ async function loadPromoAdmin() {
           : ` (${Number(obj.value).toFixed(2)}€)`
     }
     opt.textContent = label
-    select.appendChild(opt) // Ajoute l'option au sélecteur
+    select.appendChild(opt)
   })
-
-  // Sélectionne le code de la bannière
-  select.value = banner.code || ''
-  document.getElementById('promoCode').value = banner.code || ''
-  document.getElementById('promoMessage').value = banner.message || ''
-  document.getElementById('promoToggle').checked = !!banner.active
+  select.value = banner && banner.code ? banner.code : ''
+  document.getElementById('promoCode').value =
+    banner && banner.code ? banner.code : ''
+  document.getElementById('promoMessage').value =
+    banner && banner.message ? banner.message : ''
+  document.getElementById('promoToggle').checked = !!(banner && banner.active)
 }
 
 async function savePromoAdmin() {
@@ -406,4 +310,89 @@ async function savePromoAdmin() {
   } else {
     alert(data.error || 'Erreur lors de la mise à jour.')
   }
+}
+
+// --- FIRESTORE : Commandes ---
+async function fetchOrders() {
+  const snapshot = await db.collection('commandes').get()
+  return snapshot.docs.map((doc) => doc.data())
+}
+async function updateOrderStatus(orderId, newStatus) {
+  await db.collection('commandes').doc(orderId).update({ status: newStatus })
+  // Appel API pour envoyer un mail au client (adapter l'URL si besoin)
+  await fetch('/api/send-status-mail', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId, newStatus })
+  })
+}
+
+// --- FIRESTORE : Marques/Modèles ---
+async function fetchBrandsAndModels() {
+  const doc = await db.collection('phones').doc('phonesData').get()
+  if (doc.exists) return doc.data().brands
+  return {}
+}
+async function addBrand(brandName) {
+  const docRef = db.collection('phones').doc('phonesData')
+  const doc = await docRef.get()
+  let brands = doc.data().brands || {}
+  brands[brandName] = []
+  await docRef.update({ brands })
+}
+async function addModel(brandName, modelName) {
+  const docRef = db.collection('phones').doc('phonesData')
+  const doc = await docRef.get()
+  let brands = doc.data().brands || {}
+  if (!brands[brandName]) brands[brandName] = []
+  brands[brandName].push(modelName)
+  await docRef.update({ brands })
+}
+async function deleteBrand(brandName) {
+  const docRef = db.collection('phones').doc('phonesData')
+  const doc = await docRef.get()
+  let brands = doc.data().brands || {}
+  delete brands[brandName]
+  await docRef.update({ brands })
+}
+async function deleteModel(brandName, modelName) {
+  const docRef = db.collection('phones').doc('phonesData')
+  const doc = await docRef.get()
+  let brands = doc.data().brands || {}
+  if (brands[brandName]) {
+    brands[brandName] = brands[brandName].filter((m) => m !== modelName)
+    await docRef.update({ brands })
+  }
+}
+
+// --- FIRESTORE : Promo Banner ---
+async function fetchPromoBanner() {
+  const doc = await db.collection('config').doc('promoBanner').get()
+  return doc.exists ? doc.data() : null
+}
+async function updatePromoBanner(data) {
+  await db.collection('config').doc('promoBanner').set(data)
+}
+
+// --- FIRESTORE : Promo Codes ---
+async function fetchPromoCodes() {
+  const doc = await db.collection('config').doc('promoCodes').get()
+  return doc.exists ? doc.data() : {}
+}
+async function updatePromoCodes(data) {
+  await db.collection('config').doc('promoCodes').set(data)
+}
+
+// Fonctions Firestore pour les opérations CRUD
+async function addBrandFirestore(brandName) {
+  await addBrand(brandName)
+}
+async function addModelFirestore(brandName, modelName) {
+  await addModel(brandName, modelName)
+}
+async function deleteBrandFirestore(brandName) {
+  await deleteBrand(brandName)
+}
+async function deleteModelFirestore(brandName, modelName) {
+  await deleteModel(brandName, modelName)
 }

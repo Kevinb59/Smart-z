@@ -1,20 +1,7 @@
 async function fetchCommandes() {
-  // 🔐 Récupère le token JWT depuis le localStorage
-  const token = localStorage.getItem('token')
-
-  // 📡 Requête vers l'API sécurisée
-  const res = await fetch('/api/commandes', {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  })
-
-  if (!res.ok) {
-    alert('Accès refusé aux commandes')
-    return
-  }
-
-  const commandes = await res.json()
+  // Utilise Firestore pour récupérer les commandes
+  const snapshot = await db.collection('commandes').get()
+  const commandes = snapshot.docs.map((doc) => doc.data())
 
   // 🔁 Vide les 3 zones d'affichage
   document.querySelector('#nouvelles .orders').innerHTML = ''
@@ -136,4 +123,27 @@ function toggleArchivedOrders() {
     toggleIcon.classList.remove('fa-chevron-up')
     toggleIcon.classList.add('fa-chevron-down')
   }
+}
+
+// Remplacement de la récupération locale par Firestore
+async function fetchOrders() {
+  const snapshot = await db.collection('commandes').get()
+  return snapshot.docs.map((doc) => doc.data())
+}
+
+// Exemple d'utilisation pour afficher les commandes
+async function displayOrders() {
+  const orders = await fetchOrders()
+  // Logique d'affichage adaptée à la structure de tes sections (nouvelles, en cours, archivées)
+}
+
+// Pour changer le statut d'une commande
+async function updateOrderStatus(orderId, newStatus) {
+  await db.collection('commandes').doc(orderId).update({ status: newStatus })
+  // Appel API pour envoyer un mail au client (adapter l'URL si besoin)
+  await fetch('/api/send-status-mail', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId, newStatus })
+  })
 }

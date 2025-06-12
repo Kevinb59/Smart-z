@@ -107,13 +107,13 @@ document.addEventListener('DOMContentLoaded', async function () {
   // Masquer la section par défaut
   section.style.display = 'none'
 
-  // Récupération des données du banner promo
+  // Récupération des données du banner promo depuis Firestore
   try {
-    const res = await fetch('/api/promo-banner')
-    const promo = await res.json()
+    const doc = await db.collection('config').doc('promoBanner').get()
+    const promo = doc.exists ? doc.data() : null
 
     // Si le banner promo n'est pas actif ou si le code est vide, masquer la section
-    if (!promo.active || !promo.code) {
+    if (!promo || !promo.active || !promo.code) {
       section.style.display = 'none'
       return
     }
@@ -131,8 +131,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         promo.message ? '(' + promo.message + ')' : ''
       }</div>
     `
-
-    // En cas d'erreur, masquer la section
   } catch (e) {
     section.style.display = 'none'
   }
@@ -218,3 +216,9 @@ document.addEventListener('DOMContentLoaded', function () {
     })
   }
 })
+
+// Remplace la récupération locale par Firestore pour les marques/modèles
+// Appelle la fonction Firestore définie dans phoneBrandAndModel.js
+if (typeof populateBrands === 'function') {
+  populateBrands()
+}

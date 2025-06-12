@@ -1,21 +1,12 @@
 document.addEventListener('DOMContentLoaded', async function () {
-  let models = {}
-  try {
-    const response = await fetch('/api/brands-models')
-    models = await response.json()
-  } catch (error) {
-    console.error(
-      '❌ Erreur lors du chargement des marques et modèles :',
-      error
-    )
-    return
-  }
+  // On utilise Firestore pour charger les marques et modèles
+  const brands = await fetchBrandsAndModels()
 
   // Fonction d'initialisation pour une paire de selects
   window.initPhoneBrandAndModel = function (brandSelect, modelSelect) {
     // Remplir les marques si vide
     if (brandSelect.options.length <= 1) {
-      Object.keys(models).forEach((brand) => {
+      Object.keys(brands).forEach((brand) => {
         const option = document.createElement('option')
         option.value = brand
         option.textContent = brand
@@ -27,9 +18,9 @@ document.addEventListener('DOMContentLoaded', async function () {
       modelSelect.innerHTML = '<option value="">Sélectionnez un modèle</option>'
       modelSelect.disabled = true
       const selectedBrand = this.value
-      if (selectedBrand && models[selectedBrand]) {
+      if (selectedBrand && brands[selectedBrand]) {
         modelSelect.disabled = false
-        models[selectedBrand].forEach((model) => {
+        brands[selectedBrand].forEach((model) => {
           const option = document.createElement('option')
           option.value = model
           option.textContent = model
@@ -48,3 +39,27 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
   })
 })
+
+// Remplacement de la récupération locale par Firestore
+async function fetchBrandsAndModels() {
+  const doc = await db.collection('phones').doc('phonesData').get()
+  if (doc.exists) {
+    return doc.data().brands
+  }
+  return {}
+}
+
+// Exemple d'utilisation pour remplir le select
+async function populateBrands() {
+  const brands = await fetchBrandsAndModels()
+  const brandSelects = document.querySelectorAll('.phoneBrand')
+  brandSelects.forEach((select) => {
+    select.innerHTML = '<option value="">Marque</option>'
+    Object.keys(brands).forEach((brand) => {
+      const option = document.createElement('option')
+      option.value = brand
+      option.textContent = brand
+      select.appendChild(option)
+    })
+  })
+}

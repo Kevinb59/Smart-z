@@ -1,54 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
   const fonts = [
-    'Pacifico',
-    'Lobster',
-    'Fredoka One',
-    'Monoton',
-    'Great Vibes',
-    'Satisfy',
-    'Shadows Into Light',
-    'Poiret One',
-    'Dancing Script',
-    'Amatic SC',
-    'Baloo 2',
-    'Bangers',
-    'Cinzel',
-    'Courgette',
-    'Crafty Girls',
-    'Permanent Marker',
-    'Rock Salt',
-    'Sacramento',
-    'Cookie',
-    'Covered By Your Grace',
-    'Gloria Hallelujah',
-    'Indie Flower',
-    'Love Ya Like A Sister',
-    'Luckiest Guy',
-    'Marck Script',
-    'Passions Conflict',
-    'Patrick Hand',
-    'Pinyon Script',
-    'Pompiere',
-    'Quicksand',
-    'Raleway',
-    'Righteous',
-    'Shadows Into Light Two',
-    'Special Elite',
-    'Ultra',
-    'Varela Round',
-    'Yellowtail',
-    'Yeseva One',
-    'Zilla Slab',
-    'Allura',
-    'Architects Daughter',
-    'Bad Script',
-    'Bebas Neue',
-    'Black Ops One',
-    'Chewy',
-    'Faster One',
-    'Finger Paint',
-    'Handlee',
-    'Knewave'
+    { name: 'Sriracha', css: "'Sriracha', cursive" },
+    { name: 'Vibur', css: "'Vibur', cursive" },
+    { name: 'Yellowtail', css: "'Yellowtail', cursive" },
+    { name: 'Zen Tokyo Zoo', css: "'Zen Tokyo Zoo', cursive" },
+    { name: 'Source Sans 3', css: "'Source Sans 3', sans-serif" }
   ]
 
   function setupFontChoice(form) {
@@ -68,20 +24,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     fonts.forEach((font) => {
       const option = document.createElement('option')
-      option.value = font
-      option.textContent = font
-      option.style.fontFamily = `'${font}', cursive, sans-serif`
+      option.value = font.name
+      option.textContent = font.name
+      option.style.fontFamily = font.css
       fontChoice.appendChild(option)
     })
 
     // Appliquer la police actuelle si une est déjà sélectionnée
     if (fontChoice.value) {
-      customText.style.fontFamily = `'${fontChoice.value}', cursive, sans-serif`
+      const selectedFont = fonts.find((f) => f.name === fontChoice.value)
+      customText.style.fontFamily = selectedFont ? selectedFont.css : ''
     }
 
     fontChoice.addEventListener('change', () => {
-      const font = fontChoice.value
-      customText.style.fontFamily = font ? `'${font}', cursive, sans-serif` : ''
+      const font = fonts.find((f) => f.name === fontChoice.value)
+      customText.style.fontFamily = font ? font.css : ''
     })
   }
 
