@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "push": "git add . && git commit -m \"$1\" && git push"
+    "push": "git add . && git commit -m \"Auto commit: $(date '+%Y-%m-%d %H:%M:%S')\" && git push"
   },
   "description": "Projet Smart Z avec API Vercel",
   "dependencies": {
