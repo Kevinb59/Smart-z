@@ -169,14 +169,13 @@ function scrollToOrderForm() {
    ========================================================================================================= */
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Sélection du formulaire de contact
   const contactForm = document.getElementById('contactForm')
   if (contactForm) {
-    // Sélection du bouton Envoyer
     const submitBtn = contactForm.querySelector('input[type="submit"]')
     contactForm.addEventListener('submit', async function (e) {
       e.preventDefault()
       if (!submitBtn) return
+
       // Désactive le bouton et indique l'envoi en cours
       submitBtn.value = 'Envoi en cours...'
       submitBtn.disabled = true
@@ -191,23 +190,41 @@ document.addEventListener('DOMContentLoaded', function () {
         // Récupère l'URL et le secret depuis l'API backend
         const response = await fetch('/api/contact-config')
         const { GAS_URL_CONTACT, GAS_SECRET } = await response.json()
-        // Prépare les données à envoyer
-        const data = { name, email, subject, message, secret: GAS_SECRET }
-        // Envoi vers GAS
-        const res = await fetch(GAS_URL_CONTACT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+
+        // Construction de l'URL avec les paramètres
+        const params = new URLSearchParams({
+          name: encodeURIComponent(name),
+          email: encodeURIComponent(email),
+          subject: encodeURIComponent(subject),
+          message: encodeURIComponent(message),
+          secret: GAS_SECRET
         })
-        if (res.ok) {
-          submitBtn.value = 'Message envoyé !'
-          contactForm.reset()
-        } else {
+
+        // Envoi vers GAS via GET
+        const res = await fetch(`${GAS_URL_CONTACT}?${params.toString()}`, {
+          method: 'GET'
+        })
+
+        const data = await res.text()
+        console.log('Réponse brute du serveur:', data)
+
+        try {
+          const jsonData = JSON.parse(data)
+          if (jsonData.status === 'success') {
+            submitBtn.value = 'Message envoyé !'
+            contactForm.reset()
+          } else {
+            throw new Error(jsonData.message)
+          }
+        } catch (e) {
+          console.error('Erreur de parsing JSON:', e)
           submitBtn.value = "Erreur lors de l'envoi"
         }
       } catch (err) {
+        console.error('Erreur réseau:', err)
         submitBtn.value = 'Erreur réseau'
       }
+
       // Réactive le bouton après 2,5 secondes
       setTimeout(() => {
         submitBtn.value = 'Envoyer'
