@@ -1,11 +1,18 @@
+# Vercel
 .vercel
+
+# Environnements
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env
+
+# Cursor
 .cursor
 
+# Next.js build files
+.next/
 
-node_modules
-node_modules
+# Node modules
+node_modules/
