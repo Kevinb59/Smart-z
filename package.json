@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "push": "git add . && git commit -m \"Auto commit: $(date '+%Y-%m-%d %H:%M:%S')\" && git push",
-    "sync": "git pull --rebase origin main && git add -A && git commit -m \"MAJ Auto Cursor\" && git push"
+    "sync": "git add -A && git commit -m \"MAJ Auto Cursor\" || echo \"Rien à commit\" && git pull --rebase origin main && git push"
   },
   "description": "Projet Smart Z avec API Vercel",
   "dependencies": {
