@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import fs from 'fs'
 import path from 'path'
 import dotenv from 'dotenv'
+import { db } from '../../lib/firebase-admin'
 
 dotenv.config()
 
@@ -24,11 +25,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Lire l'état local
+    // --- LECTURE DEPUIS FIRESTORE ---
     let localStates = {}
-    if (fs.existsSync(DATA_PATH)) {
-      localStates = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
+    const doc = await db.collection('config').doc('promoCodes').get()
+    if (doc.exists) {
+      localStates = doc.data() || {}
+    } else {
+      // Si Firestore vide, fallback sur le JSON (transition)
+      if (fs.existsSync(DATA_PATH)) {
+        localStates = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
+      }
     }
+
     // Récupérer tous les promotion_codes (et leurs coupons associés)
     const promoCodes = await stripe.promotionCodes.list({
       limit: 100,
@@ -55,6 +63,9 @@ export default async function handler(req, res) {
       updated = true
     })
     if (updated) {
+      // --- ÉCRITURE DANS FIRESTORE ---
+      await db.collection('config').doc('promoCodes').set(localStates)
+      // --- ÉCRITURE DANS LE JSON (backup) ---
       fs.writeFileSync(DATA_PATH, JSON.stringify(localStates, null, 2), 'utf-8')
     }
 
@@ -79,7 +90,7 @@ export default async function handler(req, res) {
           id: promotion_code.id,
           code: promotion_code.code,
           times_redeemed: promotion_code.times_redeemed,
-          // L'état actif est celui du fichier local s'il existe, sinon Stripe
+          // L'état actif est celui du fichier local Firestore s'il existe, sinon Stripe
           active:
             localStates[promotion_code.code] &&
             typeof localStates[promotion_code.code] === 'object'

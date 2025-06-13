@@ -16,3 +16,13 @@
 
 # Node modules
 node_modules/
+
+# Logs
+*.log
+
+# Mac OS
+.DS_Store
+
+# Backup files
+*.swp
+*.swo
