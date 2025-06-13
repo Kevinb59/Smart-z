@@ -10,26 +10,29 @@ let lastPromos = [] // Stocke les dernières promotions récupérées
 // ====================
 // INITIALISATION ET GESTION DES ÉVÉNEMENTS
 // ====================
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async function (event) {
   await loadData() // Charge les données au démarrage
   const select = document.getElementById('brandSelect')
   const newModel = document.getElementById('newModel')
   const addModelBtn = document.getElementById('addModelBtn')
   const deleteBrandBtn = document.getElementById('deleteBrandBtn')
+  const updateBtn = document.getElementById('updatePromosBtn')
 
   // Désactive les champs/boutons au départ
-  newModel.disabled = true
-  addModelBtn.disabled = true
-  deleteBrandBtn.disabled = true
+  if (newModel) newModel.disabled = true
+  if (addModelBtn) addModelBtn.disabled = true
+  if (deleteBrandBtn) deleteBrandBtn.disabled = true
 
   // Écouteur d'événement pour le changement de sélection de marque
-  select.addEventListener('change', function () {
-    const selected = this.value
-    newModel.disabled = !selected
-    addModelBtn.disabled = !selected
-    deleteBrandBtn.disabled = !selected
-    updateModelList() // Met à jour la liste des modèles
-  })
+  if (select) {
+    select.addEventListener('change', function () {
+      const selected = this.value
+      newModel.disabled = !selected
+      addModelBtn.disabled = !selected
+      deleteBrandBtn.disabled = !selected
+      updateModelList() // Met à jour la liste des modèles
+    })
+  }
 
   // Ajoute un écouteur sur tous les selects de statut de commande
   document.body.addEventListener('change', async function (e) {
@@ -47,6 +50,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.target.disabled = false
     }
   })
+
+  // Gestion du bouton de mise à jour des promos
+  if (updateBtn) {
+    updateBtn.addEventListener('click', async function (e) {
+      e.preventDefault()
+      this.disabled = true
+      this.textContent = 'Mise à jour...'
+      try {
+        const res = await fetch('/api/stripe-promos', { method: 'POST' })
+        const data = await res.json()
+        if (data.success) {
+          alert('Codes promo mis à jour avec succès !')
+          remplirPromoTable(data.promos) // Remplit la table avec les nouvelles promotions
+        } else {
+          alert('Erreur : ' + (data.error || 'Impossible de mettre à jour.'))
+        }
+      } catch (e) {
+        alert('Erreur réseau ou serveur.')
+      }
+      this.disabled = false
+      this.textContent = '🔄 MAJ codes promo'
+    })
+  }
+
+  // Gestion des boutons de changement d'état des promotions (déléguée après remplissage)
+  // (Le code d'origine dans remplirPromoTable reste inchangé car il gère déjà la désactivation)
 })
 
 // ====================
@@ -116,33 +145,6 @@ async function updateOrderStatus(orderId, newStatus) {
     body: JSON.stringify({ orderId, newStatus })
   })
 }
-
-// ====================
-// GESTION DES PROMOTIONS
-// ====================
-document.addEventListener('DOMContentLoaded', function () {
-  const updateBtn = document.getElementById('updatePromosBtn')
-  if (updateBtn) {
-    updateBtn.addEventListener('click', async function () {
-      this.disabled = true
-      this.textContent = 'Mise à jour...'
-      try {
-        const res = await fetch('/api/stripe-promos', { method: 'POST' })
-        const data = await res.json()
-        if (data.success) {
-          alert('Codes promo mis à jour avec succès !')
-          remplirPromoTable(data.promos) // Remplit la table avec les nouvelles promotions
-        } else {
-          alert('Erreur : ' + (data.error || 'Impossible de mettre à jour.'))
-        }
-      } catch (e) {
-        alert('Erreur réseau ou serveur.')
-      }
-      this.disabled = false
-      this.textContent = '🔄 MAJ codes promo'
-    })
-  }
-})
 
 // ====================
 // REMPLISSAGE DE LA TABLE DES PROMOTIONS
