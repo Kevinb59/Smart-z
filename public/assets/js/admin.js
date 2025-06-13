@@ -249,12 +249,34 @@ function remplirPromoSelect(promos) {
 // ====================
 // GESTION DE LA BANNIÈRE PROMO
 // ====================
-const API_PROMO_CODES = '/api/promo-codes' // URL de l'API pour les codes promo
 const API_PROMO_BANNER = '/api/promo-banner' // URL de l'API pour la bannière promo
 
 async function loadPromoAdmin() {
-  // Charger les codes
-  let codes = await fetchPromoCodes()
+  // Charger les codes promo depuis Stripe via l'API
+  let codes = {}
+  let promos = []
+  try {
+    const res = await fetch('/api/stripe-promos', { method: 'POST' })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.promos)) {
+      promos = data.promos
+      // On crée un objet codes pour compatibilité avec le reste du code
+      codes = Object.fromEntries(
+        data.promos.map((p) => [
+          p.promotion_code.code,
+          {
+            type: p.coupon.percent_off ? 'percent' : 'amount',
+            value:
+              p.coupon.percent_off ||
+              (p.coupon.amount_off ? p.coupon.amount_off / 100 : 0)
+          }
+        ])
+      )
+      remplirPromoTable(data.promos)
+    }
+  } catch (e) {
+    alert('Erreur lors du chargement des codes promo Stripe.')
+  }
   // Charger la bannière
   let banner = await fetchPromoBanner()
   const select = document.getElementById('promoSelect')
@@ -282,27 +304,32 @@ async function loadPromoAdmin() {
 }
 
 async function savePromoAdmin() {
-  const token = localStorage.getItem('token')
-  const codesRes = await fetch(API_PROMO_CODES, {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-  const codes = await codesRes.json()
+  // Les codes sont déjà chargés via loadPromoAdmin (issus de Stripe)
   const code = document.getElementById('promoSelect').value
   const message = document.getElementById('promoMessage').value
   const active = document.getElementById('promoToggle').checked
 
   if (!code) return alert('Sélectionnez un code promo.')
-  const obj = codes[code]
-  if (!obj) return alert('Code promo inconnu.')
-
-  const type = obj.type
-  const value = obj.value
+  // On récupère le type et la valeur depuis le select (chargé via Stripe)
+  const opt = document.querySelector(`#promoSelect option[value='${code}']`)
+  let type = 'percent',
+    value = 0
+  if (opt && opt.textContent.includes('%')) {
+    type = 'percent'
+    value = parseFloat(opt.textContent.match(/\((\d+)%\)/)?.[1] || '0')
+  } else if (opt && opt.textContent.includes('€')) {
+    type = 'amount'
+    value = parseFloat(
+      opt.textContent.match(/\((\d+(?:[\.,]\d+)?)€\)/)?.[1].replace(',', '.') ||
+        '0'
+    )
+  }
 
   const res = await fetch(API_PROMO_BANNER, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${localStorage.getItem('token')}`
     },
     body: JSON.stringify({ active, code, message, type, value })
   })
@@ -374,15 +401,6 @@ async function fetchPromoBanner() {
 }
 async function updatePromoBanner(data) {
   await db.collection('config').doc('promoBanner').set(data)
-}
-
-// --- FIRESTORE : Promo Codes ---
-async function fetchPromoCodes() {
-  const doc = await db.collection('config').doc('promoCodes').get()
-  return doc.exists ? doc.data() : {}
-}
-async function updatePromoCodes(data) {
-  await db.collection('config').doc('promoCodes').set(data)
 }
 
 // Fonctions Firestore pour les opérations CRUD
