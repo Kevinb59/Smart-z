@@ -532,3 +532,26 @@ h3 {
   background-color: #fbe9e7;
   color: #d32f2f;
 }
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+}
+
+.badge-validated {
+  background-color: #28a745; /* Vert */
+}
+
+.badge-refunded {
+  background-color: #f0ad4e; /* Orange */
+}
+
+.badge-canceled {
+  background-color: #6c757d; /* Gris */
+}
+
+.badge-unknown {
+  background-color: #999999;
+}

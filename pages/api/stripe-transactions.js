@@ -3,7 +3,6 @@ import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
 
 dotenv.config()
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 function verifyJWT(req) {
@@ -22,69 +21,70 @@ function verifyJWT(req) {
 }
 
 export default async function handler(req, res) {
-  // Vérification de la méthode HTTP
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Méthode non autorisée' })
   }
 
   try {
-    // Vérification de l'authentification
     const user = verifyJWT(req)
     if (!user) {
       return res.status(401).json({ error: 'Non authentifié' })
     }
 
-    // Récupération des paiements avec les charges expandues
-    const payments = await stripe.paymentIntents.list({
+    const checkoutSessions = await stripe.checkout.sessions.list({
       limit: 100,
-      expand: ['data.charges']
+      expand: ['data.payment_intent']
     })
 
-    // Pour chaque paiement, récupérer la charge associée pour avoir les infos client
-    const transactions = await Promise.all(
-      payments.data.map(async (payment) => {
-        let name = 'Client inconnu'
-        let email = 'Email inconnu'
-        let payment_method = ''
-        let payment_brand = ''
-        // On récupère la charge principale liée au payment_intent
-        const charges = payment.charges?.data || []
-        if (charges.length > 0) {
-          const charge = charges[0]
-          if (charge.billing_details) {
-            name = charge.billing_details.name || name
-            email = charge.billing_details.email || email
-          }
-          if (
-            charge.payment_method_details &&
-            charge.payment_method_details.card
-          ) {
-            payment_method = 'Carte'
-            payment_brand = charge.payment_method_details.card.brand
-          } else if (
-            charge.payment_method_details &&
-            charge.payment_method_details.type
-          ) {
-            payment_method = charge.payment_method_details.type
-          }
+    const transactions = checkoutSessions.data
+      .filter((session) => session.payment_intent)
+      .map((session) => {
+        const paymentIntent = session.payment_intent
+
+        const clientName = session.customer_details?.name || 'Client inconnu'
+        const clientEmail = session.customer_details?.email || 'Email inconnu'
+        const montant = session.amount_total || paymentIntent?.amount || 0
+
+        let statut = 'Inconnu'
+        if (
+          session.status === 'complete' &&
+          paymentIntent?.status === 'succeeded'
+        ) {
+          statut = paymentIntent.amount_refunded > 0 ? 'Remboursé' : 'Validé'
+        } else if (
+          session.status === 'expired' ||
+          paymentIntent?.status === 'canceled'
+        ) {
+          statut = 'Annulé'
+        } else {
+          statut = 'Annulé'
         }
+
+        // Méthode de paiement depuis payment_intent
+        let moyenPaiementFinal = 'Inconnu'
+        const type = paymentIntent.payment_method_types?.[0]
+        if (type) {
+          moyenPaiementFinal = type.charAt(0).toUpperCase() + type.slice(1)
+        }
+
         return {
-          client: name,
-          email,
-          date: payment.created,
-          montant: payment.amount,
-          statut: payment.status === 'succeeded' ? 'Validé' : 'Annulé',
-          moyen_paiement: payment_method
-            ? `${payment_method} ${payment_brand}`.trim()
-            : ''
+          id: paymentIntent.id,
+          client: clientName,
+          email: clientEmail,
+          date: session.created,
+          montant: montant,
+          statut: statut,
+          moyen_paiement: moyenPaiementFinal
         }
       })
+
+    const filteredTransactions = transactions.filter(
+      (t) => t.email.toLowerCase() !== 'kevinblart@live.fr'
     )
 
-    // Tri par date (plus récent en premier)
-    transactions.sort((a, b) => b.date - a.date)
+    filteredTransactions.sort((a, b) => b.date - a.date)
 
-    return res.status(200).json(transactions)
+    return res.status(200).json(filteredTransactions)
   } catch (error) {
     console.error('Erreur lors de la récupération des transactions:', error)
     return res.status(500).json({ error: 'Erreur serveur: ' + error.message })

@@ -53,20 +53,33 @@ function displayTransactions() {
     tr.className = 'transaction-row'
     tr.dataset.idx = idx
 
+    // On prépare une couleur en fonction du statut
+    let statusClass = ''
+    switch (transaction.statut) {
+      case 'Validé':
+        statusClass = 'badge-validated'
+        break
+      case 'Remboursé':
+        statusClass = 'badge-refunded'
+        break
+      case 'Annulé':
+        statusClass = 'badge-canceled'
+        break
+      default:
+        statusClass = 'badge-unknown'
+    }
+
     tr.innerHTML = `
-      <td>
-        <input type="radio" name="transaction" class="transaction-checkbox"
-               data-idx="${idx}" onchange="selectTransaction(${idx})">
-      </td>
       <td>${transaction.client}</td>
       <td>${formatDate(transaction.date)}</td>
       <td>${formatAmount(transaction.montant)}</td>
-      <td>
-        <span class="status-badge status-${transaction.statut.toLowerCase()}">
-          ${transaction.statut}
-        </span>
-      </td>
+      <td><span class="status-badge ${statusClass}">${
+      transaction.statut
+    }</span></td>
     `
+
+    // On rend la ligne cliquable
+    tr.addEventListener('click', () => selectTransaction(idx))
 
     tbody.appendChild(tr)
   })
@@ -78,11 +91,9 @@ function selectTransaction(idx) {
   const viewDetailsBtn = document.getElementById('viewDetailsBtn')
   const refundBtn = document.getElementById('refundBtn')
 
-  // Mise à jour des boutons
   viewDetailsBtn.disabled = false
   refundBtn.disabled = false
 
-  // Mise à jour de l'apparence de la ligne
   document.querySelectorAll('.transaction-row').forEach((row) => {
     row.classList.remove('selected')
     if (row.dataset.idx === idx.toString()) {
@@ -112,15 +123,14 @@ function showTransactionDetails() {
       }</p>
     </div>
   `
-
   modal.querySelector('.modal-content').insertAdjacentHTML('beforeend', content)
 }
 
 // Affichage de la confirmation de remboursement
 function showRefundConfirmation() {
-  if (!selectedTransactionId) return
+  if (selectedTransactionId === null) return
 
-  const transaction = transactions.find((t) => t.id === selectedTransactionId)
+  const transaction = transactions[selectedTransactionId]
   if (!transaction) return
 
   const modal = createModal('Confirmation de remboursement')
@@ -128,9 +138,9 @@ function showRefundConfirmation() {
   const content = `
     <div class="modal-body">
       <p>Êtes-vous sûr de vouloir rembourser cette transaction ?</p>
-      <p><strong>Client:</strong> ${transaction.customer_name}</p>
-      <p><strong>Montant:</strong> ${formatAmount(transaction.amount)}</p>
-      <p><strong>Date:</strong> ${formatDate(transaction.created)}</p>
+      <p><strong>Client:</strong> ${transaction.client}</p>
+      <p><strong>Montant:</strong> ${formatAmount(transaction.montant)}</p>
+      <p><strong>Date:</strong> ${formatDate(transaction.date)}</p>
     </div>
     <div class="modal-footer">
       <button class="button" onclick="closeModal()">Annuler</button>
@@ -157,17 +167,17 @@ async function processRefund(transactionId) {
 
     if (!response.ok) throw new Error('Erreur lors du remboursement')
 
-    const result = await response.json()
+    await response.json()
     alert('Remboursement effectué avec succès')
     closeModal()
-    loadTransactions() // Recharger les transactions
+    loadTransactions()
   } catch (error) {
     console.error('Erreur:', error)
     alert('Erreur lors du remboursement')
   }
 }
 
-// Création d'une modale
+// Création de la modale
 function createModal(title) {
   const modal = document.createElement('div')
   modal.className = 'modal'
@@ -191,7 +201,7 @@ function closeModal() {
   }
 }
 
-// Utilitaires
+// Utils pour la date et montant
 function formatDate(timestamp) {
   return new Date(timestamp * 1000).toLocaleString('fr-FR', {
     day: '2-digit',

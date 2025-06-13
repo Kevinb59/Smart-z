@@ -165,7 +165,7 @@ function scrollToOrderForm() {
 }
 
 /* =========================================================================================================
-   S C R I P T   P O U R   L ' E N V O I   D U   F O R M U L A I R E   D E   C O N T A C T   V I A   G A S
+   S C R I P T   P O U R   L ' E N V O I   D U   F O R M U L A I R E   D E   C O N T A C T   V I A   API
    ========================================================================================================= */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -176,48 +176,33 @@ document.addEventListener('DOMContentLoaded', function () {
       e.preventDefault()
       if (!submitBtn) return
 
-      // Désactive le bouton et indique l'envoi en cours
       submitBtn.value = 'Envoi en cours...'
       submitBtn.disabled = true
 
-      // Récupération des valeurs du formulaire
-      const name = document.getElementById('name').value.trim()
-      const email = document.getElementById('email').value.trim()
-      const subject = document.getElementById('subject').value.trim()
-      const message = document.getElementById('message').value.trim()
+      const name = document.getElementById('contactName').value.trim()
+      const email = document.getElementById('contactEmail').value.trim()
+      const subject = document.getElementById('contactSubject').value.trim()
+      const message = document.getElementById('contactMessage').value.trim()
+
+      if (!name || !email || !message) {
+        submitBtn.value = 'Veuillez remplir tous les champs requis'
+        resetButton(submitBtn)
+        return
+      }
 
       try {
-        // Récupère l'URL et le secret depuis l'API backend
-        const response = await fetch('/api/contact-config')
-        const { GAS_URL_CONTACT, GAS_SECRET } = await response.json()
-
-        // Construction de l'URL avec les paramètres
-        const params = new URLSearchParams({
-          name: encodeURIComponent(name),
-          email: encodeURIComponent(email),
-          subject: encodeURIComponent(subject),
-          message: encodeURIComponent(message),
-          secret: GAS_SECRET
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message })
         })
 
-        // Envoi vers GAS via GET
-        const res = await fetch(`${GAS_URL_CONTACT}?${params.toString()}`, {
-          method: 'GET'
-        })
+        const data = await res.json()
 
-        const data = await res.text()
-        console.log('Réponse brute du serveur:', data)
-
-        try {
-          const jsonData = JSON.parse(data)
-          if (jsonData.status === 'success') {
-            submitBtn.value = 'Message envoyé !'
-            contactForm.reset()
-          } else {
-            throw new Error(jsonData.message)
-          }
-        } catch (e) {
-          console.error('Erreur de parsing JSON:', e)
+        if (data.status === 'success') {
+          submitBtn.value = 'Message envoyé !'
+          contactForm.reset()
+        } else {
           submitBtn.value = "Erreur lors de l'envoi"
         }
       } catch (err) {
@@ -225,12 +210,15 @@ document.addEventListener('DOMContentLoaded', function () {
         submitBtn.value = 'Erreur réseau'
       }
 
-      // Réactive le bouton après 2,5 secondes
-      setTimeout(() => {
-        submitBtn.value = 'Envoyer'
-        submitBtn.disabled = false
-      }, 2500)
+      resetButton(submitBtn)
     })
+  }
+
+  function resetButton(button) {
+    setTimeout(() => {
+      button.value = 'Envoyer'
+      button.disabled = false
+    }, 2500)
   }
 })
 
