@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { db } from '../../utils/firebase-admin'
+import { db } from '../../lib/firebase-admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       designs
     } = req.body
 
-    // Générer l'ID de base pour la commande
+    // 🔢 Génération de l'ID de base A001, A002, etc.
     const ordersRef = db.collection('commandes')
     const snapshot = await ordersRef.orderBy('id', 'desc').limit(1).get()
     let baseId = 'A001'
@@ -40,8 +40,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // Créer les commandes dans Firestore
+    // 🔨 Création des documents Firestore
     const orders = []
+    const batch = db.batch()
+
     for (let i = 0; i < designs.length; i++) {
       const design = designs[i]
       const orderId = designs.length === 1 ? baseId : `${baseId}-${i + 1}`
@@ -58,20 +60,25 @@ export default async function handler(req, res) {
         city,
         zipCode,
         phones: design.phones,
-        customText: design.customText,
-        fontChoice: design.fontChoice,
+        customText: design.customText || null,
+        fontChoice: design.fontChoice || null,
         quantity: parseInt(design.quantity),
         imageUrl: design.imageUrl,
+        amountPaid: null,
+        promoCode: null,
         status: 'En attente',
         lastStatusMailed: null,
         createdAt: new Date().toISOString()
       }
 
-      await ordersRef.doc(orderId).set(orderData)
+      const docRef = ordersRef.doc(orderId)
+      batch.set(docRef, orderData)
       orders.push(orderData)
     }
 
-    // Générer un line_item par design
+    await batch.commit()
+
+    // 🎯 Préparation des produits Stripe
     const line_items = designs.map((design, index) => ({
       price_data: {
         currency: 'eur',
@@ -79,12 +86,12 @@ export default async function handler(req, res) {
           name: `Design ${index + 1} - ${design.phones}`,
           images: [design.imageUrl]
         },
-        unit_amount: 2490 // 24,90 € en centimes
+        unit_amount: 2490
       },
       quantity: parseInt(design.quantity)
     }))
 
-    // Générer les métadonnées Stripe (infos client + designs + orderIds)
+    // 🎯 Génération des métadonnées
     const metadata = {
       orderIds: orders.map((o) => o.id).join(','),
       firstName,
@@ -107,7 +114,7 @@ export default async function handler(req, res) {
       )
     }
 
-    // Créer la session Stripe
+    // 🎯 Création de la session Stripe
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items,
@@ -119,7 +126,7 @@ export default async function handler(req, res) {
       metadata
     })
 
-    // Appel GAS pour notification
+    // 🎯 Envoi vers GAS optionnel
     const GAS_URL = process.env.GAS_URL_NEW_ORDER
     if (GAS_URL) {
       try {
@@ -133,7 +140,6 @@ export default async function handler(req, res) {
         })
       } catch (e) {
         console.error('Erreur GAS:', e)
-        // On continue même si GAS échoue
       }
     }
 
