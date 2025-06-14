@@ -112,8 +112,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     const doc = await db.collection('config').doc('promoBanner').get()
     const promo = doc.exists ? doc.data() : null
 
-    // Si le banner promo n'est pas actif ou si le code est vide, masquer la section
-    if (!promo || !promo.active || !promo.code) {
+    // Si le banner promo n'est pas à afficher ou si le code est vide, masquer la section
+    if (!promo || !promo.show || !promo.code) {
       section.style.display = 'none'
       return
     }

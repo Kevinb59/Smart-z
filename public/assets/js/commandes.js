@@ -13,15 +13,33 @@ async function fetchCommandes() {
     const prix = (cmd.amountPaid / 100).toFixed(2) + '€'
     const idCommande = cmd.id || 'Non défini'
     const nomClient = `${cmd.firstName} ${cmd.lastName}`
-    const statusOptions = ['En attente', 'En cours', 'Envoyée', 'Archivée']
-
+    // Statuts et transitions autorisées
+    const status = cmd.status
+    let statusOptions = []
+    if (status === 'En attente') statusOptions = ['En cours', 'Annulée']
+    else if (status === 'En cours') statusOptions = ['Envoyée']
+    else if (status === 'Envoyée') statusOptions = ['Archivée']
+    else if (status === 'Archivée') statusOptions = []
+    else if (status === 'Annulée') statusOptions = ['En cours']
+    // Toujours afficher le statut actuel comme sélectionné
+    const allStatus = [
+      'En attente',
+      'En cours',
+      'Envoyée',
+      'Archivée',
+      'Annulée'
+    ]
     const statusSelect = `
-      <select class="status-select" data-id="${idCommande}">
-        ${statusOptions
+      <select class="status-select" data-id="${idCommande}" ${
+      statusOptions.length === 0 ? 'disabled' : ''
+    }>
+        ${allStatus
           .map(
             (opt) =>
-              `<option value="${opt}"${
-                cmd.status === opt ? ' selected' : ''
+              `<option value="${opt}"${cmd.status === opt ? ' selected' : ''}${
+                opt !== cmd.status && !statusOptions.includes(opt)
+                  ? ' disabled'
+                  : ''
               }>${opt}</option>`
           )
           .join('')}
@@ -35,7 +53,6 @@ async function fetchCommandes() {
         /; ?/g,
         '<br>'
       )}</article>`,
-
       // Coordonnées client
       `<article class="article">
         ${cmd.address}${cmd.address2 ? '<br>' + cmd.address2 : ''}<br>
@@ -43,7 +60,6 @@ async function fetchCommandes() {
         ${cmd.email}<br>
         ${cmd.phone}
       </article>`,
-
       // Texte + police (affiché uniquement si l'un des deux existe)
       cmd.customText || cmd.fontChoice
         ? `<article class="article">
@@ -51,12 +67,10 @@ async function fetchCommandes() {
         ${cmd.fontChoice || ''}
       </article>`
         : '',
-
       // Image produit
       `<article class="article">
         <img class="image-preview2" src="${cmd.imageUrl}" alt="Image" />
       </article>`,
-
       // Prix, quantité, promo
       `<article class="article">
         Quantité: ${cmd.quantity}<br>
@@ -80,23 +94,57 @@ async function fetchCommandes() {
       </div>
     `
 
-    const zone =
-      cmd.status === 'Archivée'
-        ? document.querySelector('#archivees .orders')
-        : cmd.lastStatusMailed === null
-        ? document.querySelector('#nouvelles .orders')
-        : document.querySelector('#encours .orders')
-
+    // Section d'affichage selon le statut
+    let zone = null
+    if (cmd.status === 'Archivée' || cmd.status === 'Annulée') {
+      zone = document.querySelector('#archivees .orders')
+    } else if (cmd.status === 'En attente') {
+      zone = document.querySelector('#nouvelles .orders')
+    } else {
+      zone = document.querySelector('#encours .orders')
+    }
     zone.innerHTML += dropdown
   })
 
   // 🔁 Écoute les changements de statut
   document.querySelectorAll('.status-select').forEach((select) => {
-    select.addEventListener('change', function () {
+    select.addEventListener('change', async function () {
       const id = this.getAttribute('data-id')
       const newStatus = this.value
-      console.log(`Commande ${id} changée en : ${newStatus}`)
-      // Tu peux ajouter ici une requête pour sauvegarder le nouveau statut
+      // Récupérer la commande complète
+      const docRef = db.collection('commandes').doc(id)
+      const doc = await docRef.get()
+      if (!doc.exists) return alert('Commande introuvable !')
+      const commande = doc.data()
+      // Déterminer la nouvelle valeur de lastStatusMailed
+      let lastStatusMailed = commande.lastStatusMailed
+      if (newStatus === 'En cours') lastStatusMailed = 'InProgress'
+      else if (newStatus === 'Envoyée') lastStatusMailed = 'Send'
+      else if (newStatus === 'Annulée') lastStatusMailed = 'Annulée'
+      else if (newStatus === 'Archivée')
+        lastStatusMailed = commande.lastStatusMailed // pas de changement
+      else lastStatusMailed = null
+      // Mettre à jour Firestore
+      await docRef.update({ status: newStatus, lastStatusMailed })
+      // Appel GAS si besoin
+      const GAS_URL =
+        window.GAS_URL_STATUS_ORDER_MAIL ||
+        (typeof GAS_URL_STATUS_ORDER_MAIL !== 'undefined'
+          ? GAS_URL_STATUS_ORDER_MAIL
+          : null)
+      if ((newStatus === 'En cours' || newStatus === 'Envoyée') && GAS_URL) {
+        try {
+          await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(commande)
+          })
+        } catch (e) {
+          // On ignore les erreurs GAS
+        }
+      }
+      alert('Statut mis à jour !')
+      await fetchCommandes()
     })
   })
 
@@ -127,13 +175,23 @@ function toggleArchivedOrders() {
 
 // Remplacement de la récupération locale par Firestore
 async function fetchOrders() {
-  const snapshot = await db.collection('commandes').get()
-  return snapshot.docs.map((doc) => doc.data())
+  return new Promise((resolve, reject) => {
+    db.collection('commandes').onSnapshot(
+      (snapshot) => {
+        const orders = snapshot.docs.map((doc) => doc.data())
+        displayOrders(orders)
+        resolve(orders)
+      },
+      (error) => {
+        console.error('Erreur de listener Firestore:', error)
+        reject(error)
+      }
+    )
+  })
 }
 
 // Exemple d'utilisation pour afficher les commandes
-async function displayOrders() {
-  const orders = await fetchOrders()
+async function displayOrders(orders) {
   // Logique d'affichage adaptée à la structure de tes sections (nouvelles, en cours, archivées)
 }
 

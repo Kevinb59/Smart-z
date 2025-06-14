@@ -75,8 +75,8 @@ export default async function handler(req, res) {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
-      success_url: 'https://www.smart-z.fr/success',
-      cancel_url: 'https://www.smart-z.fr/cancel',
+      success_url: 'https://www.smart-z.fr/success.html',
+      cancel_url: 'https://www.smart-z.fr/cancel.html',
       customer_email: email,
       line_items,
       allow_promotion_codes: true,

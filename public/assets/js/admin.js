@@ -3,7 +3,7 @@
 // ====================
 // CONSTANTES ET VARIABLES
 // ====================
-const API_BRANDS_MODELS = '/api/brands-models' // URL de l'API pour les marques et modèles
+// SUPPRIMER const API_BRANDS_MODELS = '/api/brands-models'
 let allData = {} // Stocke toutes les données des marques et modèles
 let lastPromos = [] // Stocke les dernières promotions récupérées
 
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async function (event) {
   const newModel = document.getElementById('newModel')
   const addModelBtn = document.getElementById('addModelBtn')
   const deleteBrandBtn = document.getElementById('deleteBrandBtn')
-  const updateBtn = document.getElementById('updatePromosBtn')
+  const loadPromosBtn = document.getElementById('loadPromosBtn')
 
   // Désactive les champs/boutons au départ
   if (newModel) newModel.disabled = true
@@ -51,31 +51,44 @@ document.addEventListener('DOMContentLoaded', async function (event) {
     }
   })
 
-  // Gestion du bouton de mise à jour des promos
-  if (updateBtn) {
-    updateBtn.addEventListener('click', async function (e) {
+  // Gestion du bouton de chargement des promos
+  if (loadPromosBtn) {
+    loadPromosBtn.addEventListener('click', async function (e) {
       e.preventDefault()
       this.disabled = true
-      this.textContent = 'Mise à jour...'
-      try {
-        const res = await fetch('/api/stripe-promos', { method: 'POST' })
-        const data = await res.json()
-        if (data.success) {
-          alert('Codes promo mis à jour avec succès !')
-          remplirPromoTable(data.promos) // Remplit la table avec les nouvelles promotions
-        } else {
-          alert('Erreur : ' + (data.error || 'Impossible de mettre à jour.'))
-        }
-      } catch (e) {
-        alert('Erreur réseau ou serveur.')
-      }
+      this.textContent = 'Chargement...'
+      await loadPromoAdmin()
       this.disabled = false
-      this.textContent = '🔄 MAJ codes promo'
+      this.textContent = '🔄 CHARGER CODES PROMO'
     })
   }
 
+  // NE PAS appeler loadPromoAdmin ici !
+  // Les codes promo ne doivent être affichés qu'après clic sur le bouton
+
   // Gestion des boutons de changement d'état des promotions (déléguée après remplissage)
   // (Le code d'origine dans remplirPromoTable reste inchangé car il gère déjà la désactivation)
+
+  // Ajout du handler pour la suppression de marque
+  if (deleteBrandBtn) {
+    deleteBrandBtn.addEventListener('click', async function (e) {
+      e.preventDefault()
+      const brand = select.value
+      if (!brand) {
+        alert('Veuillez sélectionner une marque à supprimer.')
+        return
+      }
+      if (!confirm(`Supprimer la marque "${brand}" et tous ses modèles ?`))
+        return
+      await deleteBrand(brand)
+      await loadData()
+      select.value = ''
+      updateModelList()
+      newModel.disabled = true
+      addModelBtn.disabled = true
+      deleteBrandBtn.disabled = true
+    })
+  }
 })
 
 // ====================
@@ -83,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async function (event) {
 // ====================
 async function loadData(selectedBrand = null) {
   try {
-    const data = await fetchBrandsAndModels()
+    const data = await fetchBrandsAndModels() // Firestore
     allData = data // Stocke les données récupérées
     const select = document.getElementById('brandSelect')
     const loading = document.getElementById('loading')
@@ -102,7 +115,7 @@ async function loadData(selectedBrand = null) {
     updateModelList() // Met à jour la liste des modèles
   } catch (error) {
     console.error('Erreur :', error)
-    document.getElementById('loading').textContent = 'Erreur de chargement.' // Affiche une erreur
+    document.getElementById('loading').textContent = 'Erreur de chargement.'
   }
 }
 
@@ -249,7 +262,15 @@ function remplirPromoSelect(promos) {
 // ====================
 // GESTION DE LA BANNIÈRE PROMO
 // ====================
-const API_PROMO_BANNER = '/api/promo-banner' // URL de l'API pour la bannière promo
+const API_PROMO_BANNER = null // On n'utilise plus d'API ni de JSON local
+
+async function fetchPromoBanner() {
+  const doc = await db.collection('config').doc('promoBanner').get()
+  return doc.exists ? doc.data() : null
+}
+async function updatePromoBanner(data) {
+  await db.collection('config').doc('promoBanner').set(data)
+}
 
 async function loadPromoAdmin() {
   // Charger les codes promo depuis Stripe via l'API
@@ -272,137 +293,152 @@ async function loadPromoAdmin() {
           }
         ])
       )
-      remplirPromoTable(data.promos)
     }
   } catch (e) {
     alert('Erreur lors du chargement des codes promo Stripe.')
   }
-  // Charger la bannière
+  // Charger la bannière depuis Firestore
   let banner = await fetchPromoBanner()
+
+  // Remplir le tableau des codes promo
+  remplirPromoTable(promos)
+
+  // Pré-remplir les champs avec la bannière Firestore
   const select = document.getElementById('promoSelect')
-  select.innerHTML =
-    '<option value="">-- Sélectionner une promotion --</option>'
-  Object.entries(codes).forEach(([code, obj]) => {
-    const opt = document.createElement('option')
-    opt.value = code
-    let label = code
-    if (obj && obj.type && obj.value !== undefined && !isNaN(obj.value)) {
-      label +=
-        obj.type === 'percent'
-          ? ` (${obj.value}%)`
-          : ` (${Number(obj.value).toFixed(2)}€)`
-    }
-    opt.textContent = label
-    select.appendChild(opt)
-  })
   select.value = banner && banner.code ? banner.code : ''
   document.getElementById('promoCode').value =
     banner && banner.code ? banner.code : ''
   document.getElementById('promoMessage').value =
     banner && banner.message ? banner.message : ''
-  document.getElementById('promoToggle').checked = !!(banner && banner.active)
+  document.getElementById('promoToggle').checked = !!(banner && banner.show)
 }
 
 async function savePromoAdmin() {
-  // Les codes sont déjà chargés via loadPromoAdmin (issus de Stripe)
   const code = document.getElementById('promoSelect').value
   const message = document.getElementById('promoMessage').value
-  const active = document.getElementById('promoToggle').checked
-
+  const show = document.getElementById('promoToggle').checked
   if (!code) return alert('Sélectionnez un code promo.')
-  // On récupère le type et la valeur depuis le select (chargé via Stripe)
+  // On récupère le type et la valeur depuis la selectbox
   const opt = document.querySelector(`#promoSelect option[value='${code}']`)
   let type = 'percent',
     value = 0
   if (opt && opt.textContent.includes('%')) {
     type = 'percent'
-    value = parseFloat(opt.textContent.match(/\((\d+)%\)/)?.[1] || '0')
+    value = parseFloat(opt.textContent.match(/(\d+)%/)?.[1] || '0')
   } else if (opt && opt.textContent.includes('€')) {
     type = 'amount'
     value = parseFloat(
-      opt.textContent.match(/\((\d+(?:[\.,]\d+)?)€\)/)?.[1].replace(',', '.') ||
-        '0'
+      opt.textContent.match(/(\d+(?:[\.,]\d+)?)€/)?.[1].replace(',', '.') || '0'
     )
   }
-
-  const res = await fetch(API_PROMO_BANNER, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`
-    },
-    body: JSON.stringify({ active, code, message, type, value })
-  })
-  const data = await res.json()
-  if (data.success) {
-    loadPromoAdmin() // Recharge les données de la bannière
-  } else {
-    alert(data.error || 'Erreur lors de la mise à jour.')
-  }
+  await updatePromoBanner({ code, message, show, type, value })
+  alert('Bannière promo mise à jour !')
+  await loadPromoAdmin()
 }
 
-// --- FIRESTORE : Commandes ---
-async function fetchOrders() {
-  const snapshot = await db.collection('commandes').get()
-  return snapshot.docs.map((doc) => doc.data())
-}
-async function updateOrderStatus(orderId, newStatus) {
-  await db.collection('commandes').doc(orderId).update({ status: newStatus })
-  // Appel API pour envoyer un mail au client (adapter l'URL si besoin)
-  await fetch('/api/send-status-mail', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ orderId, newStatus })
-  })
-}
-
-// --- FIRESTORE : Marques/Modèles ---
+// ====================
+// FIRESTORE : Marques/Modèles
+// ====================
 async function fetchBrandsAndModels() {
   const doc = await db.collection('phones').doc('phonesData').get()
   if (doc.exists) return doc.data().brands
   return {}
 }
 async function addBrand(brandName) {
+  if (!brandName || typeof brandName !== 'string' || !brandName.trim()) {
+    alert('Veuillez entrer un nom de marque valide.')
+    return
+  }
   const docRef = db.collection('phones').doc('phonesData')
   const doc = await docRef.get()
   let brands = doc.data().brands || {}
+  if (brands[brandName]) {
+    alert('Cette marque existe déjà.')
+    return
+  }
   brands[brandName] = []
+  // Nettoyage
+  Object.keys(brands).forEach((k) => {
+    brands[k] = (brands[k] || []).filter((v) => typeof v === 'string' && v)
+  })
   await docRef.update({ brands })
+  alert('Marque ajoutée avec succès !')
+  await loadData()
 }
 async function addModel(brandName, modelName) {
+  if (!brandName || typeof brandName !== 'string' || !brandName.trim()) {
+    alert("Veuillez sélectionner une marque valide avant d'ajouter un modèle.")
+    return
+  }
+  if (!modelName || typeof modelName !== 'string' || !modelName.trim()) {
+    alert('Veuillez entrer un nom de modèle valide.')
+    return
+  }
   const docRef = db.collection('phones').doc('phonesData')
   const doc = await docRef.get()
   let brands = doc.data().brands || {}
   if (!brands[brandName]) brands[brandName] = []
+  if (brands[brandName].includes(modelName)) {
+    alert('Ce modèle existe déjà pour cette marque.')
+    return
+  }
   brands[brandName].push(modelName)
+  // Nettoyage
+  Object.keys(brands).forEach((k) => {
+    brands[k] = (brands[k] || []).filter((v) => typeof v === 'string' && v)
+  })
   await docRef.update({ brands })
+  alert('Modèle ajouté avec succès !')
+  await loadData()
 }
 async function deleteBrand(brandName) {
+  if (!brandName || typeof brandName !== 'string' || !brandName.trim()) {
+    alert('Veuillez sélectionner une marque à supprimer.')
+    return
+  }
   const docRef = db.collection('phones').doc('phonesData')
   const doc = await docRef.get()
   let brands = doc.data().brands || {}
+  if (!brands[brandName]) {
+    alert('Marque introuvable.')
+    return
+  }
   delete brands[brandName]
+  // Nettoyage
+  Object.keys(brands).forEach((k) => {
+    brands[k] = (brands[k] || []).filter((v) => typeof v === 'string' && v)
+  })
   await docRef.update({ brands })
+  alert('Marque supprimée avec succès !')
+  await loadData()
 }
 async function deleteModel(brandName, modelName) {
+  if (!brandName || typeof brandName !== 'string' || !brandName.trim()) {
+    alert('Veuillez sélectionner une marque valide.')
+    return
+  }
+  if (!modelName || typeof modelName !== 'string' || !modelName.trim()) {
+    alert('Veuillez sélectionner un modèle à supprimer.')
+    return
+  }
   const docRef = db.collection('phones').doc('phonesData')
   const doc = await docRef.get()
   let brands = doc.data().brands || {}
   if (brands[brandName]) {
     brands[brandName] = brands[brandName].filter((m) => m !== modelName)
+    // Nettoyage
+    Object.keys(brands).forEach((k) => {
+      brands[k] = (brands[k] || []).filter((v) => typeof v === 'string' && v)
+    })
     await docRef.update({ brands })
+    alert('Modèle supprimé avec succès !')
+    await loadData()
   }
 }
 
-// --- FIRESTORE : Promo Banner ---
-async function fetchPromoBanner() {
-  const doc = await db.collection('config').doc('promoBanner').get()
-  return doc.exists ? doc.data() : null
-}
-async function updatePromoBanner(data) {
-  await db.collection('config').doc('promoBanner').set(data)
-}
-
+// ====================
+// FIRESTORE : Promo Banner ---
+// ====================
 // Fonctions Firestore pour les opérations CRUD
 async function addBrandFirestore(brandName) {
   await addBrand(brandName)

@@ -152,7 +152,7 @@
               <input type="text" id="newBrand" placeholder="Nom de la marque" />
             </div>
             <div class="col-4 col-12-xxsmall">
-              <button id="addBrandBtn" style="width: 100%" onclick="addBrand()">
+              <button id="addBrandBtn" style="width: 100%" onclick="addBrand(document.getElementById('newBrand').value)">
                 ✅ <span class="hide-on-mobile">Ajouter</span>
               </button>
             </div>
@@ -165,7 +165,7 @@
               <input type="text" id="newModel" placeholder="Nom du modèle" />
             </div>
             <div class="col-4 col-12-xxsmall">
-              <button id="addModelBtn" style="width: 100%" onclick="addModel()">
+              <button id="addModelBtn" style="width: 100%" onclick="addModel(document.getElementById('brandSelect').value, document.getElementById('newModel').value)">
                 ✅ <span class="hide-on-mobile">Ajouter</span>
               </button>
             </div>
@@ -206,10 +206,10 @@
             <button
               type="button"
               class="button fit"
-              id="updatePromosBtn"
+              id="loadPromosBtn"
               style="margin-bottom: 1em"
             >
-              🔄 MAJ Codes promo
+              🔄 CHARGER CODES PROMO
             </button>
           </li>
         </ul>

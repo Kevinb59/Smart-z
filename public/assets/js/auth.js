@@ -57,17 +57,14 @@ window.addEventListener('load', () => {
     document.getElementById('admin-content').style.display = 'block'
     document.getElementById('logout-container').style.display = 'block'
     if (typeof fetchCommandes === 'function') fetchCommandes()
-    if (typeof loadPromoAdmin === 'function') {
-      loadPromoAdmin()
-      setTimeout(() => {
-        const promoSelect = document.getElementById('promoSelect')
-        const promoToggle = document.getElementById('promoToggle')
-        const promoMessage = document.getElementById('promoMessage')
-        if (promoSelect) promoSelect.addEventListener('change', savePromoAdmin)
-        if (promoToggle) promoToggle.addEventListener('change', savePromoAdmin)
-        if (promoMessage) promoMessage.addEventListener('blur', savePromoAdmin)
-      }, 200)
-    }
+    setTimeout(() => {
+      const promoSelect = document.getElementById('promoSelect')
+      const promoToggle = document.getElementById('promoToggle')
+      const promoMessage = document.getElementById('promoMessage')
+      if (promoSelect) promoSelect.addEventListener('change', savePromoAdmin)
+      if (promoToggle) promoToggle.addEventListener('change', savePromoAdmin)
+      if (promoMessage) promoMessage.addEventListener('blur', savePromoAdmin)
+    }, 200)
   } else {
     document.getElementById('logout-container').style.display = 'none'
   }
