@@ -1,62 +1,38 @@
-import { useEffect } from 'react'
-import { useRouter } from 'next/router'
-import { db } from '../utils/firebase-admin'
+import React from 'react'
+import Link from 'next/link'
 
 export default function Success() {
-  const router = useRouter()
-  const { session_id } = router.query
-
-  useEffect(() => {
-    if (!session_id) return
-
-    async function updateOrderStatus() {
-      try {
-        // Récupérer la session Stripe
-        const response = await fetch('/api/get-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: session_id })
-        })
-        const session = await response.json()
-
-        if (session.payment_status === 'paid') {
-          // Mettre à jour le statut des commandes dans Firestore
-          const orderIds = session.metadata.orderIds.split(',')
-          const batch = db.batch()
-
-          for (const orderId of orderIds) {
-            const orderRef = db.collection('commandes').doc(orderId)
-            batch.update(orderRef, {
-              status: 'En attente',
-              amountPaid: session.amount_total,
-              promoCode:
-                session.total_details.amount_discount > 0
-                  ? session.promotion_code
-                  : null
-            })
-          }
-
-          await batch.commit()
-        }
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour du statut:', error)
-      }
-    }
-
-    updateOrderStatus()
-  }, [session_id])
-
   return (
-    <div className="success-page">
-      <h1>Merci pour votre commande !</h1>
+    <div
+      style={{
+        minHeight: '60vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <h1>Paiement accepté !</h1>
       <p>
-        Votre paiement a été accepté et votre commande est en cours de
-        traitement.
+        Merci pour votre commande. Votre paiement a bien été pris en compte et
+        votre commande est en cours de traitement.
       </p>
-      <p>Vous recevrez un email de confirmation dans quelques instants.</p>
-      <a href="/" className="button">
-        Retour à l'accueil
-      </a>
+      <Link href="/">
+        <button
+          style={{
+            marginTop: 24,
+            padding: '12px 32px',
+            fontSize: '1.1em',
+            borderRadius: 8,
+            background: '#6c47ff',
+            color: '#fff',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          Retour à l'accueil
+        </button>
+      </Link>
     </div>
   )
 }
