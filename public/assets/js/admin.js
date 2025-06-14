@@ -452,3 +452,45 @@ async function deleteBrandFirestore(brandName) {
 async function deleteModelFirestore(brandName, modelName) {
   await deleteModel(brandName, modelName)
 }
+
+// ====================
+// GÉNÉRATION DES IDs DE COMMANDE
+// ====================
+async function generateOrderId(isMultiple = false, baseId = null) {
+  const ordersRef = db.collection('commandes')
+  let lastOrder = null
+
+  if (isMultiple && baseId) {
+    // Pour les commandes multiples, on cherche le dernier suffixe
+    const snapshot = await ordersRef
+      .where('baseId', '==', baseId)
+      .orderBy('id', 'desc')
+      .limit(1)
+      .get()
+
+    if (!snapshot.empty) {
+      lastOrder = snapshot.docs[0].data()
+      const lastSuffix = parseInt(lastOrder.id.split('-')[1])
+      return `${baseId}-${lastSuffix + 1}`
+    }
+    return `${baseId}-1`
+  } else {
+    // Pour une nouvelle commande, on cherche la dernière commande
+    const snapshot = await ordersRef.orderBy('id', 'desc').limit(1).get()
+
+    if (!snapshot.empty) {
+      lastOrder = snapshot.docs[0].data()
+      const lastId = lastOrder.id.split('-')[0] // Enlève le suffixe si présent
+      const lastLetter = lastId[0]
+      const lastNumber = parseInt(lastId.substring(1))
+
+      if (lastNumber >= 999) {
+        // Si on atteint 999, on passe à la lettre suivante
+        const nextLetter = String.fromCharCode(lastLetter.charCodeAt(0) + 1)
+        return `${nextLetter}001`
+      }
+      return `${lastLetter}${(lastNumber + 1).toString().padStart(3, '0')}`
+    }
+    return 'A001' // Première commande
+  }
+}

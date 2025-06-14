@@ -1,6 +1,5 @@
-import fs from 'fs'
-import path from 'path'
 import Stripe from 'stripe'
+import { db } from '../../utils/firebase-admin'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -70,109 +69,116 @@ export default async function handler(req, res) {
     const session = event.data.object
     const metadata = session.metadata
 
-    if (!metadata || !metadata.idBase) {
+    if (!metadata || !metadata.orderIds) {
       console.warn('Session sans métadonnées valides')
       return res.status(200).end('Aucune donnée à traiter')
     }
 
-    // 🔍 Récupération du code promo appliqué (si présent)
+    // Récupération des IDs de commande
+    const orderIds = metadata.orderIds.split(',')
+    const totalAmount = session.amount_total || 0
+    const amountPerOrder = Math.round(totalAmount / orderIds.length)
+    const now = new Date().toISOString()
+
+    // Mise à jour des commandes dans Firestore
+    const batch = db.batch()
+    for (const orderId of orderIds) {
+      const orderRef = db.collection('commandes').doc(orderId)
+      batch.update(orderRef, {
+        amountPaid: amountPerOrder,
+        promoCode: null, // sera ajouté plus bas si besoin
+        status: 'En attente',
+        lastStatusMailed: null,
+        updatedAt: now
+      })
+    }
+    try {
+      await batch.commit()
+      console.log(`✔️ ${orderIds.length} commande(s) mise(s) à jour`)
+    } catch (e) {
+      console.error('Erreur mise à jour Firestore :', e)
+      return res.status(500).end('Erreur serveur')
+    }
+
+    // Récupération du code promo appliqué (si présent)
     let appliedPromo = null
     if (session.total_details?.amount_discount > 0) {
       try {
         const discount = session.total_details.breakdown?.discounts?.[0]
         const couponId = discount?.discount?.coupon?.id
-
         if (couponId) {
           const coupon = await stripe.coupons.retrieve(couponId)
-          const promoCode = coupon.name || coupon.id
-
-          // Vérifie si le code promo est actif
-          if (isPromoCodeActive(promoCode)) {
-            appliedPromo = promoCode
-            console.log('Code promo actif appliqué:', promoCode)
-          } else {
-            console.log('Code promo inactif ignoré:', promoCode)
-            // Annule la session car le code promo n'est pas actif
-            await stripe.checkout.sessions.expire(session.id)
-            return res.status(400).json({ error: 'Code promo invalide' })
-          }
+          appliedPromo = coupon.name || coupon.id
         }
       } catch (err) {
         console.warn('Erreur récupération du code promo :', err)
       }
     }
 
-    const commandesPath = path.resolve(process.cwd(), 'api/data/commandes.json')
-    let commandes = []
-
-    try {
-      const raw = fs.readFileSync(commandesPath, 'utf-8')
-      commandes = JSON.parse(raw)
-    } catch {
-      console.warn('Fichier commandes.json vide ou absent, création…')
-    }
-
-    // Récupération de tous les designs depuis les métadonnées
-    const designs = Object.keys(metadata)
-      .filter((key) => key.startsWith('design_'))
-      .map((key) => JSON.parse(metadata[key]))
-
-    const totalAmount = session.amount_total || 0
-    const amountPerDesign = Math.round(totalAmount / designs.length)
-    const now = new Date().toISOString()
-
-    const newCommandes = designs.map((design) =>
-      clean({
-        id: design.id,
-        firstName: metadata.firstName,
-        lastName: metadata.lastName,
-        email: metadata.email,
-        phone: metadata.phone,
-        address: metadata.address,
-        address2: metadata.address2,
-        city: metadata.city,
-        zipCode: metadata.zipCode,
-        phones: design.phones,
-        customText: design.customText || null,
-        fontChoice: design.fontChoice || null,
-        quantity: design.quantity,
-        imageUrl: design.imageUrl,
-        amountPaid: amountPerDesign,
-        promoCode: appliedPromo,
-        status: 'En attente',
-        lastStatusMailed: null,
-        createdAt: now
-      })
+    // Récupérer toutes les infos de la commande pour GAS
+    const docs = await Promise.all(
+      orderIds.map((id) => db.collection('commandes').doc(id).get())
     )
+    const commandes = docs.map((doc) => doc.data())
+    if (!commandes.length) return res.status(200).end('Aucune commande trouvée')
 
-    try {
-      fs.writeFileSync(
-        commandesPath,
-        JSON.stringify([...commandes, ...newCommandes], null, 2)
-      )
-      console.log(`✔️ ${newCommandes.length} commande(s) enregistrée(s)`)
-    } catch (e) {
-      console.error('Erreur écriture commandes.json :', e)
-      return res.status(500).end('Erreur serveur')
+    // On prend les infos client du premier doc
+    const clientFields = [
+      'firstName',
+      'lastName',
+      'email',
+      'phone',
+      'address',
+      'address2',
+      'city',
+      'zipCode'
+    ]
+    const clientInfo = {}
+    for (const f of clientFields) clientInfo[f] = commandes[0][f]
+
+    // On regroupe tous les designs
+    const designs = commandes.map((cmd) => ({
+      id: cmd.id,
+      phones: cmd.phones,
+      imageUrl: cmd.imageUrl,
+      customText: cmd.customText,
+      fontChoice: cmd.fontChoice,
+      quantity: cmd.quantity
+    }))
+
+    // Objet à envoyer à GAS
+    const toGAS = {
+      orderIds,
+      ...clientInfo,
+      amountPaid: totalAmount,
+      promoCode: appliedPromo,
+      designs
     }
 
-    // ✉️ Envoi à Google Apps Script
-    const GAS_URL = process.env.GAS_URL
-    const GAS_SECRET = process.env.GAS_SECRET
-
-    for (const commande of newCommandes) {
+    // Envoi à Google Apps Script (optionnel et silencieux)
+    const GAS_URL = process.env.GAS_URL_NEW_ORDER
+    if (GAS_URL && GAS_URL.startsWith('http')) {
       try {
         await fetch(GAS_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${GAS_SECRET}`
-          },
-          body: JSON.stringify(commande)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(toGAS)
         })
       } catch (e) {
-        console.error(`❌ Envoi à GAS échoué pour ${commande.id} :`, e)
+        console.warn('Envoi à GAS échoué (non bloquant) :', e)
       }
+    } else {
+      console.log('Aucune URL GAS valide, envoi ignoré.')
+    }
+
+    // Mise à jour du code promo dans Firestore si besoin
+    if (appliedPromo) {
+      const batchPromo = db.batch()
+      for (const orderId of orderIds) {
+        const orderRef = db.collection('commandes').doc(orderId)
+        batchPromo.update(orderRef, { promoCode: appliedPromo })
+      }
+      await batchPromo.commit()
     }
 
     return res.status(200).end('OK')

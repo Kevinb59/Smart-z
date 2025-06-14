@@ -1,19 +1,14 @@
-import fs from 'fs'
-import path from 'path'
 import Stripe from 'stripe'
-import dotenv from 'dotenv'
-
-dotenv.config()
+import { db } from '../../utils/firebase-admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Méthode non autorisée' })
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    // 🧾 Données client + designs
     const {
       firstName,
       lastName,
@@ -26,40 +21,58 @@ export default async function handler(req, res) {
       designs
     } = req.body
 
-    // 📁 Lire le fichier commandes.json
-    const commandesPath = path.resolve(process.cwd(), 'api/data/commandes.json')
-    let commandes = []
+    // Générer l'ID de base pour la commande
+    const ordersRef = db.collection('commandes')
+    const snapshot = await ordersRef.orderBy('id', 'desc').limit(1).get()
+    let baseId = 'A001'
 
-    try {
-      const raw = fs.readFileSync(commandesPath, 'utf-8')
-      commandes = JSON.parse(raw)
-    } catch (e) {
-      console.warn('commandes.json introuvable ou vide, première commande ?')
+    if (!snapshot.empty) {
+      const lastOrder = snapshot.docs[0].data()
+      const lastId = lastOrder.id.split('-')[0]
+      const lastLetter = lastId[0]
+      const lastNumber = parseInt(lastId.substring(1))
+
+      if (lastNumber >= 999) {
+        const nextLetter = String.fromCharCode(lastLetter.charCodeAt(0) + 1)
+        baseId = `${nextLetter}001`
+      } else {
+        baseId = `${lastLetter}${(lastNumber + 1).toString().padStart(3, '0')}`
+      }
     }
 
-    // 🆔 Calcul de l'identifiant principal (ex: A151)
-    let lastId = commandes.length
-      ? commandes.at(-1).id?.split('-')[0] || 'A000'
-      : 'A000'
-    let letter = lastId[0]
-    let number = parseInt(lastId.slice(1))
+    // Créer les commandes dans Firestore
+    const orders = []
+    for (let i = 0; i < designs.length; i++) {
+      const design = designs[i]
+      const orderId = designs.length === 1 ? baseId : `${baseId}-${i + 1}`
 
-    number++
-    if (number > 999) {
-      letter = String.fromCharCode(letter.charCodeAt(0) + 1)
-      number = 1
+      const orderData = {
+        id: orderId,
+        baseId: designs.length > 1 ? baseId : null,
+        firstName,
+        lastName,
+        email,
+        phone,
+        address,
+        address2,
+        city,
+        zipCode,
+        phones: design.phones,
+        customText: design.customText,
+        fontChoice: design.fontChoice,
+        quantity: parseInt(design.quantity),
+        imageUrl: design.imageUrl,
+        status: 'En attente',
+        lastStatusMailed: null,
+        createdAt: new Date().toISOString()
+      }
+
+      await ordersRef.doc(orderId).set(orderData)
+      orders.push(orderData)
     }
 
-    const nextBaseId = `${letter}${String(number).padStart(3, '0')}`
-
-    // 🧩 Ajouter un ID unique à chaque design : A151 ou A151-1, A151-2, ...
-    const enrichedDesigns = designs.map((design, index) => ({
-      ...design,
-      id: designs.length === 1 ? nextBaseId : `${nextBaseId}-${index + 1}`
-    }))
-
-    // 🧾 Line items Stripe (un par design)
-    const line_items = enrichedDesigns.map((design, index) => ({
+    // Générer un line_item par design
+    const line_items = designs.map((design, index) => ({
       price_data: {
         currency: 'eur',
         product_data: {
@@ -71,39 +84,62 @@ export default async function handler(req, res) {
       quantity: parseInt(design.quantity)
     }))
 
-    // 🧠 Création de la session Stripe avec métadonnées
+    // Générer les métadonnées Stripe (infos client + designs + orderIds)
+    const metadata = {
+      orderIds: orders.map((o) => o.id).join(','),
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      address2,
+      city,
+      zipCode,
+      ...designs.reduce(
+        (acc, design, idx) => ({
+          ...acc,
+          [`design_${idx + 1}`]: JSON.stringify({
+            ...design,
+            id: orders[idx].id
+          })
+        }),
+        {}
+      )
+    }
+
+    // Créer la session Stripe
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      mode: 'payment',
-      success_url: 'https://www.smart-z.fr/success.html',
-      cancel_url: 'https://www.smart-z.fr/cancel.html',
-      customer_email: email,
       line_items,
+      mode: 'payment',
       allow_promotion_codes: true,
-      metadata: {
-        idBase: nextBaseId,
-        firstName,
-        lastName,
-        email,
-        phone,
-        address,
-        address2,
-        city,
-        zipCode,
-        ...enrichedDesigns.reduce(
-          (acc, design, index) => ({
-            ...acc,
-            [`design_${index + 1}`]: JSON.stringify(design)
-          }),
-          {}
-        )
-      }
+      success_url: `${req.headers.origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.origin}/cancel.html`,
+      customer_email: email,
+      metadata
     })
 
-    // 🟢 Retour de l'ID de session à initCheckout.js
+    // Appel GAS pour notification
+    const GAS_URL = process.env.GAS_URL_NEW_ORDER
+    if (GAS_URL) {
+      try {
+        await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orders,
+            sessionId: session.id
+          })
+        })
+      } catch (e) {
+        console.error('Erreur GAS:', e)
+        // On continue même si GAS échoue
+      }
+    }
+
     res.status(200).json({ id: session.id })
   } catch (error) {
-    console.error('Erreur Stripe :', error.message)
-    res.status(500).json({ error: 'Erreur lors de la création de la session' })
+    console.error('Erreur:', error)
+    res.status(500).json({ error: 'Erreur lors de la création de la commande' })
   }
 }
