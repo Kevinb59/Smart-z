@@ -120,11 +120,55 @@ async function fetchCommandes() {
       if (!confirmation) {
         // Si l'utilisateur annule, on remet l'ancien statut
         this.value = oldStatus
+        await fetchCommandes() // Recharge l'affichage même en cas d'annulation
         return
       }
 
-      await updateOrderStatus(id, newStatus) // On délègue la suite à admin.js
-      await fetchCommandes() // Recharge l'affichage après modification
+      try {
+        // Récupérer la commande complète depuis Firestore
+        const docRef = db.collection('commandes').doc(id)
+        const doc = await docRef.get()
+        if (!doc.exists) throw new Error('Commande introuvable')
+
+        const commande = doc.data()
+
+        // Calcul de la nouvelle valeur de lastStatusMailed
+        let lastStatusMailed = commande.lastStatusMailed
+        if (newStatus === 'En cours') lastStatusMailed = 'InProgress'
+        else if (newStatus === 'Envoyée') lastStatusMailed = 'Send'
+        else if (newStatus === 'Annulée') lastStatusMailed = 'Annulée'
+        else if (newStatus === 'Archivée')
+          lastStatusMailed = commande.lastStatusMailed
+        else lastStatusMailed = null
+
+        // Mise à jour Firestore
+        await docRef.update({ status: newStatus, lastStatusMailed })
+
+        // Mise à jour locale avant envoi
+        commande.status = newStatus
+        commande.lastStatusMailed = lastStatusMailed
+
+        if (
+          newStatus === 'En cours' ||
+          newStatus === 'Envoyée' ||
+          newStatus === 'Annulée'
+        ) {
+          try {
+            await fetch('/api/send-status-mail', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(commande)
+            })
+          } catch (e) {
+            console.error("Erreur d'appel à l'API :", e)
+          }
+        }
+
+        await fetchCommandes() // Recharge l'affichage après modification
+      } catch (err) {
+        alert('Erreur lors de la mise à jour du statut.')
+        this.value = oldStatus // Remet l'ancien statut en cas d'erreur
+      }
     })
   })
 

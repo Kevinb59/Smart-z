@@ -34,23 +34,6 @@ document.addEventListener('DOMContentLoaded', async function (event) {
     })
   }
 
-  // Ajoute un écouteur sur tous les selects de statut de commande
-  document.body.addEventListener('change', async function (e) {
-    if (e.target.classList.contains('status-select')) {
-      const orderId = e.target.getAttribute('data-id')
-      const newStatus = e.target.value
-      e.target.disabled = true
-      try {
-        await updateOrderStatus(orderId, newStatus)
-        alert('Statut mis à jour dans la base de données.')
-        await fetchOrders() // Recharge l'affichage si besoin
-      } catch (err) {
-        alert('Erreur lors de la mise à jour du statut.')
-      }
-      e.target.disabled = false
-    }
-  })
-
   // Gestion du bouton de chargement des promos
   if (loadPromosBtn) {
     loadPromosBtn.addEventListener('click', async function (e) {
@@ -148,46 +131,6 @@ function updateModelList() {
 async function fetchOrders() {
   const snapshot = await db.collection('commandes').get()
   return snapshot.docs.map((doc) => doc.data())
-}
-async function updateOrderStatus(orderId, newStatus) {
-  // Récupérer la commande complète depuis Firestore
-  const docRef = db.collection('commandes').doc(orderId)
-  const doc = await docRef.get()
-  if (!doc.exists) throw new Error('Commande introuvable')
-
-  const commande = doc.data()
-
-  // Calcul de la nouvelle valeur de lastStatusMailed
-  let lastStatusMailed = commande.lastStatusMailed
-  if (newStatus === 'En cours') lastStatusMailed = 'InProgress'
-  else if (newStatus === 'Envoyée') lastStatusMailed = 'Send'
-  else if (newStatus === 'Annulée') lastStatusMailed = 'Annulée'
-  else if (newStatus === 'Archivée')
-    lastStatusMailed = commande.lastStatusMailed
-  else lastStatusMailed = null
-
-  // Mise à jour Firestore
-  await docRef.update({ status: newStatus, lastStatusMailed })
-
-  // Mise à jour locale avant envoi
-  commande.status = newStatus
-  commande.lastStatusMailed = lastStatusMailed
-
-  if (
-    newStatus === 'En cours' ||
-    newStatus === 'Envoyée' ||
-    newStatus === 'Annulée'
-  ) {
-    try {
-      await fetch('/api/send-status-mail', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(commande)
-      })
-    } catch (e) {
-      console.error("Erreur d'appel à l'API :", e)
-    }
-  }
 }
 
 // ====================
