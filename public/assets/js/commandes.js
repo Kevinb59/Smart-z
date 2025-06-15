@@ -111,12 +111,17 @@ async function fetchCommandes() {
     select.addEventListener('change', async function () {
       const id = this.getAttribute('data-id')
       const newStatus = this.value
+      const oldStatus = this.options[this.selectedIndex].text
 
       // Confirmation avant action
       const confirmation = confirm(
         `Confirmer le changement de statut vers "${newStatus}" ?`
       )
-      if (!confirmation) return
+      if (!confirmation) {
+        // Si l'utilisateur annule, on remet l'ancien statut
+        this.value = oldStatus
+        return
+      }
 
       await updateOrderStatus(id, newStatus) // On délègue la suite à admin.js
       await fetchCommandes() // Recharge l'affichage après modification
