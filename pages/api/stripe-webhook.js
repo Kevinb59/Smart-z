@@ -69,34 +69,84 @@ export default async function handler(req, res) {
     const session = event.data.object
     const metadata = session.metadata
 
-    if (!metadata || !metadata.orderIds) {
+    if (!metadata) {
       console.warn('Session sans métadonnées valides')
       return res.status(200).end('Aucune donnée à traiter')
     }
 
-    // Récupération des IDs de commande
-    const orderIds = metadata.orderIds.split(',')
+    // 🔢 Génération de l'ID de base A001, A002, etc.
+    const ordersRef = db.collection('commandes')
+    const snapshot = await ordersRef.orderBy('id', 'desc').limit(1).get()
+    let baseId = 'A001'
+
+    if (!snapshot.empty) {
+      const lastOrder = snapshot.docs[0].data()
+      const lastId = lastOrder.id.split('-')[0]
+      const lastLetter = lastId[0]
+      const lastNumber = parseInt(lastId.substring(1))
+
+      if (lastNumber >= 999) {
+        const nextLetter = String.fromCharCode(lastLetter.charCodeAt(0) + 1)
+        baseId = `${nextLetter}001`
+      } else {
+        baseId = `${lastLetter}${(lastNumber + 1).toString().padStart(3, '0')}`
+      }
+    }
+
+    // Récupération des designs depuis les métadonnées
+    const designs = []
+    let i = 1
+    while (metadata[`design_${i}`]) {
+      designs.push(JSON.parse(metadata[`design_${i}`]))
+      i++
+    }
+
     const totalAmount = session.amount_total || 0
-    const amountPerOrder = Math.round(totalAmount / orderIds.length)
+    const amountPerOrder = Math.round(totalAmount / designs.length)
     const now = new Date().toISOString()
 
-    // Mise à jour des commandes dans Firestore
+    // 🔨 Création des documents Firestore
+    const orders = []
     const batch = db.batch()
-    for (const orderId of orderIds) {
-      const orderRef = db.collection('commandes').doc(orderId)
-      batch.update(orderRef, {
+
+    for (let i = 0; i < designs.length; i++) {
+      const design = designs[i]
+      const orderId = designs.length === 1 ? baseId : `${baseId}-${i + 1}`
+
+      const orderData = {
+        id: orderId,
+        baseId: designs.length > 1 ? baseId : null,
+        firstName: metadata.firstName,
+        lastName: metadata.lastName,
+        email: metadata.email,
+        phone: metadata.phone,
+        address: metadata.address,
+        address2: metadata.address2 || null,
+        city: metadata.city,
+        zipCode: metadata.zipCode,
+        phones: design.phones,
+        customText: design.customText || null,
+        fontChoice: design.fontChoice || null,
+        quantity: parseInt(design.quantity),
+        imageUrl: design.imageUrl,
         amountPaid: amountPerOrder,
-        promoCode: null, // sera ajouté plus bas si besoin
+        promoCode: null,
         status: 'En attente',
         lastStatusMailed: null,
+        createdAt: now,
         updatedAt: now
-      })
+      }
+
+      const docRef = ordersRef.doc(orderId)
+      batch.set(docRef, orderData)
+      orders.push(orderData)
     }
+
     try {
       await batch.commit()
-      console.log(`✔️ ${orderIds.length} commande(s) mise(s) à jour`)
+      console.log(`✔️ ${orders.length} commande(s) créée(s)`)
     } catch (e) {
-      console.error('Erreur mise à jour Firestore :', e)
+      console.error('Erreur création Firestore :', e)
       return res.status(500).end('Erreur serveur')
     }
 
@@ -115,44 +165,14 @@ export default async function handler(req, res) {
       }
     }
 
-    // Récupérer toutes les infos de la commande pour GAS
-    const docs = await Promise.all(
-      orderIds.map((id) => db.collection('commandes').doc(id).get())
-    )
-    const commandes = docs.map((doc) => doc.data())
-    if (!commandes.length) return res.status(200).end('Aucune commande trouvée')
-
-    // On prend les infos client du premier doc
-    const clientFields = [
-      'firstName',
-      'lastName',
-      'email',
-      'phone',
-      'address',
-      'address2',
-      'city',
-      'zipCode'
-    ]
-    const clientInfo = {}
-    for (const f of clientFields) clientInfo[f] = commandes[0][f]
-
-    // On regroupe tous les designs
-    const designs = commandes.map((cmd) => ({
-      id: cmd.id,
-      phones: cmd.phones,
-      imageUrl: cmd.imageUrl,
-      customText: cmd.customText,
-      fontChoice: cmd.fontChoice,
-      quantity: cmd.quantity
-    }))
-
-    // Objet à envoyer à GAS
-    const toGAS = {
-      orderIds,
-      ...clientInfo,
-      amountPaid: totalAmount,
-      promoCode: appliedPromo,
-      designs
+    // Mise à jour du code promo dans Firestore si besoin
+    if (appliedPromo) {
+      const batchPromo = db.batch()
+      for (const order of orders) {
+        const orderRef = ordersRef.doc(order.id)
+        batchPromo.update(orderRef, { promoCode: appliedPromo })
+      }
+      await batchPromo.commit()
     }
 
     // Envoi à Google Apps Script (optionnel et silencieux)
@@ -162,23 +182,16 @@ export default async function handler(req, res) {
         await fetch(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toGAS)
+          body: JSON.stringify({
+            orders,
+            sessionId: session.id,
+            amountPaid: totalAmount,
+            promoCode: appliedPromo
+          })
         })
       } catch (e) {
         console.warn('Envoi à GAS échoué (non bloquant) :', e)
       }
-    } else {
-      console.log('Aucune URL GAS valide, envoi ignoré.')
-    }
-
-    // Mise à jour du code promo dans Firestore si besoin
-    if (appliedPromo) {
-      const batchPromo = db.batch()
-      for (const orderId of orderIds) {
-        const orderRef = db.collection('commandes').doc(orderId)
-        batchPromo.update(orderRef, { promoCode: appliedPromo })
-      }
-      await batchPromo.commit()
     }
 
     return res.status(200).end('OK')
