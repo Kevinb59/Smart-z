@@ -188,36 +188,3 @@ function toggleArchivedOrders() {
     toggleIcon.classList.add('fa-chevron-down')
   }
 }
-
-// Remplacement de la récupération locale par Firestore
-async function fetchOrders() {
-  return new Promise((resolve, reject) => {
-    db.collection('commandes').onSnapshot(
-      (snapshot) => {
-        const orders = snapshot.docs.map((doc) => doc.data())
-        displayOrders(orders)
-        resolve(orders)
-      },
-      (error) => {
-        console.error('Erreur de listener Firestore:', error)
-        reject(error)
-      }
-    )
-  })
-}
-
-// Exemple d'utilisation pour afficher les commandes
-async function displayOrders(orders) {
-  // Logique d'affichage adaptée à la structure de tes sections (nouvelles, en cours, archivées)
-}
-
-// Pour changer le statut d'une commande
-async function updateOrderStatus(orderId, newStatus) {
-  await db.collection('commandes').doc(orderId).update({ status: newStatus })
-  // Appel API pour envoyer un mail au client (adapter l'URL si besoin)
-  await fetch('/api/send-status-mail', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ orderId, newStatus })
-  })
-}
