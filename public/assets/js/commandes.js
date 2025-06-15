@@ -148,12 +148,19 @@ async function fetchCommandes() {
     })
   })
 
-  // 📋 Copier l'image au clic
+  // 📋 Télécharger l'image au clic
   document.querySelectorAll('.image-preview2').forEach((img) => {
     img.addEventListener('click', (e) => {
       e.stopPropagation()
-      navigator.clipboard.writeText(img.src)
-      alert('Lien copié !')
+      const link = document.createElement('a')
+      link.href = img.src
+      const commandeInfo = img
+        .closest('.dropdown')
+        .querySelector('.trigger-label').textContent
+      link.download = `commande-${commandeInfo}.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     })
   })
 }
