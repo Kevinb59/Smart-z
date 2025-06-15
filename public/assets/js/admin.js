@@ -169,21 +169,15 @@ async function updateOrderStatus(orderId, newStatus) {
   // Mettre à jour Firestore
   await docRef.update({ status: newStatus, lastStatusMailed })
 
-  // Appel GAS si besoin
-  const GAS_URL =
-    typeof GAS_URL_STATUS_ORDER_MAIL !== 'undefined'
-      ? GAS_URL_STATUS_ORDER_MAIL
-      : window.GAS_URL_STATUS_ORDER_MAIL || null
-
-  if ((newStatus === 'En cours' || newStatus === 'Envoyée') && GAS_URL) {
+  if (newStatus === 'En cours' || newStatus === 'Envoyée') {
     try {
-      await fetch(GAS_URL, {
+      await fetch('/api/send-status-mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(commande)
       })
     } catch (e) {
-      console.error("Erreur d'appel GAS :", e)
+      console.error("Erreur d'appel à l'API :", e)
     }
   }
 }
