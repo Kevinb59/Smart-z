@@ -150,17 +150,26 @@ async function fetchCommandes() {
 
   // 📋 Télécharger l'image au clic
   document.querySelectorAll('.image-preview2').forEach((img) => {
-    img.addEventListener('click', (e) => {
+    img.addEventListener('click', async (e) => {
       e.stopPropagation()
-      const link = document.createElement('a')
-      link.href = img.src
-      const commandeInfo = img
-        .closest('.dropdown')
-        .querySelector('.trigger-label').textContent
-      link.download = `commande-${commandeInfo}.jpg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      try {
+        const response = await fetch(img.src)
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        const commandeInfo = img
+          .closest('.dropdown')
+          .querySelector('.trigger-label').textContent
+        link.download = `commande-${commandeInfo}.jpg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } catch (error) {
+        console.error('Erreur lors du téléchargement:', error)
+        alert("Erreur lors du téléchargement de l'image")
+      }
     })
   })
 }
