@@ -111,19 +111,22 @@ async function fetchCommandes() {
     select.addEventListener('change', async function () {
       const id = this.getAttribute('data-id')
       const newStatus = this.value
+
       // Récupérer la commande complète
       const docRef = db.collection('commandes').doc(id)
       const doc = await docRef.get()
       if (!doc.exists) return alert('Commande introuvable !')
       const commande = doc.data()
-      // Déterminer la nouvelle valeur de lastStatusMailed
+
+      // Calculer la nouvelle valeur de lastStatusMailed
       let lastStatusMailed = commande.lastStatusMailed
       if (newStatus === 'En cours') lastStatusMailed = 'InProgress'
       else if (newStatus === 'Envoyée') lastStatusMailed = 'Send'
       else if (newStatus === 'Annulée') lastStatusMailed = 'Annulée'
       else if (newStatus === 'Archivée')
-        lastStatusMailed = commande.lastStatusMailed // pas de changement
+        lastStatusMailed = commande.lastStatusMailed
       else lastStatusMailed = null
+
       // Mettre à jour Firestore
       await docRef.update({ status: newStatus, lastStatusMailed })
 
@@ -131,17 +134,6 @@ async function fetchCommandes() {
       commande.status = newStatus
       commande.lastStatusMailed = lastStatusMailed
 
-      if (newStatus === 'En cours' || newStatus === 'Envoyée') {
-        try {
-          await fetch('/api/send-status-mail', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(commande)
-          })
-        } catch (e) {
-          console.error("Erreur d'appel à l'API :", e)
-        }
-      }
       alert('Statut mis à jour !')
       await fetchCommandes()
     })
