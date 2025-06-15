@@ -8,7 +8,9 @@ dotenv.config()
 
 export const config = {
   api: {
-    bodyParser: false // requis pour Stripe
+    bodyParser: false,
+    externalResolver: true,
+    maxDuration: 60
   }
 }
 
@@ -50,7 +52,22 @@ function isPromoCodeActive(code) {
 }
 
 export default async function handler(req, res) {
-  console.log('📥 Webhook reçu:', req.method)
+  // Ajout des en-têtes CORS
+  res.setHeader('Access-Control-Allow-Credentials', true)
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST')
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, stripe-signature'
+  )
+
+  // Gestion des requêtes OPTIONS
+  if (req.method === 'OPTIONS') {
+    res.status(200).end()
+    return
+  }
+
+  console.log('📥 Webhook reçu:', req.method, req.headers)
 
   if (req.method !== 'POST') {
     console.log('❌ Méthode non autorisée:', req.method)
