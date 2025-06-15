@@ -169,6 +169,10 @@ async function updateOrderStatus(orderId, newStatus) {
   // Mettre à jour Firestore
   await docRef.update({ status: newStatus, lastStatusMailed })
 
+  // Mise à jour locale avant l'envoi
+  commande.status = newStatus
+  commande.lastStatusMailed = lastStatusMailed
+
   if (newStatus === 'En cours' || newStatus === 'Envoyée') {
     try {
       await fetch('/api/send-status-mail', {
