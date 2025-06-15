@@ -157,7 +157,7 @@ async function updateOrderStatus(orderId, newStatus) {
 
   const commande = doc.data()
 
-  // Déterminer la nouvelle valeur de lastStatusMailed
+  // Calcul de la nouvelle valeur de lastStatusMailed
   let lastStatusMailed = commande.lastStatusMailed
   if (newStatus === 'En cours') lastStatusMailed = 'InProgress'
   else if (newStatus === 'Envoyée') lastStatusMailed = 'Send'
@@ -166,14 +166,18 @@ async function updateOrderStatus(orderId, newStatus) {
     lastStatusMailed = commande.lastStatusMailed
   else lastStatusMailed = null
 
-  // Mettre à jour Firestore
+  // Mise à jour Firestore
   await docRef.update({ status: newStatus, lastStatusMailed })
 
-  // Mise à jour locale avant l'envoi
+  // Mise à jour locale avant envoi
   commande.status = newStatus
   commande.lastStatusMailed = lastStatusMailed
 
-  if (newStatus === 'En cours' || newStatus === 'Envoyée') {
+  if (
+    newStatus === 'En cours' ||
+    newStatus === 'Envoyée' ||
+    newStatus === 'Annulée'
+  ) {
     try {
       await fetch('/api/send-status-mail', {
         method: 'POST',

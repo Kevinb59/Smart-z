@@ -112,30 +112,14 @@ async function fetchCommandes() {
       const id = this.getAttribute('data-id')
       const newStatus = this.value
 
-      // Récupérer la commande complète
-      const docRef = db.collection('commandes').doc(id)
-      const doc = await docRef.get()
-      if (!doc.exists) return alert('Commande introuvable !')
-      const commande = doc.data()
+      // Confirmation avant action
+      const confirmation = confirm(
+        `Confirmer le changement de statut vers "${newStatus}" ?`
+      )
+      if (!confirmation) return
 
-      // Calculer la nouvelle valeur de lastStatusMailed
-      let lastStatusMailed = commande.lastStatusMailed
-      if (newStatus === 'En cours') lastStatusMailed = 'InProgress'
-      else if (newStatus === 'Envoyée') lastStatusMailed = 'Send'
-      else if (newStatus === 'Annulée') lastStatusMailed = 'Annulée'
-      else if (newStatus === 'Archivée')
-        lastStatusMailed = commande.lastStatusMailed
-      else lastStatusMailed = null
-
-      // Mettre à jour Firestore
-      await docRef.update({ status: newStatus, lastStatusMailed })
-
-      // Mise à jour locale avant l'envoi
-      commande.status = newStatus
-      commande.lastStatusMailed = lastStatusMailed
-
-      alert('Statut mis à jour !')
-      await fetchCommandes()
+      await updateOrderStatus(id, newStatus) // On délègue la suite à admin.js
+      await fetchCommandes() // Recharge l'affichage après modification
     })
   })
 
