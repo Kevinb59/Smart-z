@@ -150,13 +150,42 @@ async function fetchOrders() {
   return snapshot.docs.map((doc) => doc.data())
 }
 async function updateOrderStatus(orderId, newStatus) {
-  await db.collection('commandes').doc(orderId).update({ status: newStatus })
-  // Appel API pour envoyer un mail au client (adapter l'URL si besoin)
-  await fetch('/api/send-status-mail', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ orderId, newStatus })
-  })
+  // Récupérer la commande complète depuis Firestore
+  const docRef = db.collection('commandes').doc(orderId)
+  const doc = await docRef.get()
+  if (!doc.exists) throw new Error('Commande introuvable')
+
+  const commande = doc.data()
+
+  // Déterminer la nouvelle valeur de lastStatusMailed
+  let lastStatusMailed = commande.lastStatusMailed
+  if (newStatus === 'En cours') lastStatusMailed = 'InProgress'
+  else if (newStatus === 'Envoyée') lastStatusMailed = 'Send'
+  else if (newStatus === 'Annulée') lastStatusMailed = 'Annulée'
+  else if (newStatus === 'Archivée')
+    lastStatusMailed = commande.lastStatusMailed
+  else lastStatusMailed = null
+
+  // Mettre à jour Firestore
+  await docRef.update({ status: newStatus, lastStatusMailed })
+
+  // Appel GAS si besoin
+  const GAS_URL =
+    typeof GAS_URL_STATUS_ORDER_MAIL !== 'undefined'
+      ? GAS_URL_STATUS_ORDER_MAIL
+      : window.GAS_URL_STATUS_ORDER_MAIL || null
+
+  if ((newStatus === 'En cours' || newStatus === 'Envoyée') && GAS_URL) {
+    try {
+      await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(commande)
+      })
+    } catch (e) {
+      console.error("Erreur d'appel GAS :", e)
+    }
+  }
 }
 
 // ====================
