@@ -225,6 +225,7 @@ export default async function handler(req, res) {
 
       // Envoi des mails de confirmation
       try {
+        console.log("📧 Préparation de l'envoi des mails...")
         const mailResponse = await fetch('/api/send-new-order-mail', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -237,15 +238,15 @@ export default async function handler(req, res) {
         })
 
         if (!mailResponse.ok) {
-          console.warn(
-            '⚠️ Envoi des mails échoué (non bloquant):',
-            await mailResponse.text()
-          )
+          const errorText = await mailResponse.text()
+          console.error("❌ Erreur lors de l'envoi des mails:", errorText)
+          // On continue malgré l'erreur car c'est non bloquant
         } else {
-          console.log('✅ Mails de confirmation envoyés')
+          console.log('✅ Mails de confirmation envoyés avec succès')
         }
       } catch (e) {
-        console.warn('⚠️ Envoi des mails échoué (non bloquant):', e)
+        console.error("❌ Erreur lors de l'envoi des mails:", e)
+        // On continue malgré l'erreur car c'est non bloquant
       }
 
       return res

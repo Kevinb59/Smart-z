@@ -9,12 +9,25 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('📧 Début du traitement des mails')
     const { orders, sessionId, amountPaid, promoCode } = req.body
+
+    if (!orders || !Array.isArray(orders) || orders.length === 0) {
+      console.error('❌ Données de commande invalides:', orders)
+      return res
+        .status(400)
+        .json({ status: 'error', message: 'Données de commande invalides' })
+    }
 
     // Envoi du mail au client
     const clientEmail = orders[0].email
     const firstName = orders[0].firstName
     const lastName = orders[0].lastName
+
+    console.log('👤 Client:', {
+      email: clientEmail,
+      name: `${firstName} ${lastName}`
+    })
 
     const logoUrl =
       'https://raw.githubusercontent.com/Kevinb59/mon-formulaire-smarteez/refs/heads/main/Logo%20Smart-Z.jpg'
@@ -22,6 +35,12 @@ export default async function handler(req, res) {
     // Construction du HTML pour le client
     let designsHtml = ''
     orders.forEach((order, index) => {
+      // Vérification des données du design
+      if (!order.phones || !Array.isArray(order.phones)) {
+        console.warn(`⚠️ Design ${index + 1}: phones invalide`, order.phones)
+        order.phones = []
+      }
+
       designsHtml += `
         <div style="background-color:#ffffff; border-radius:10px; box-shadow:0px 0px 10px rgba(0,0,0,0.1); padding:15px; margin-bottom:20px;">
           <h3 style="color:#5a2d82;">Design ${index + 1} :</h3>
@@ -134,6 +153,13 @@ Design ${index + 1} :
   .join('\n')}
 `
 
+    if (!process.env.BREVO_API_KEY) {
+      console.error('❌ BREVO_API_KEY manquante')
+      return res
+        .status(500)
+        .json({ status: 'error', message: 'Configuration Brevo manquante' })
+    }
+
     // Envoi du mail au client
     const clientPayload = {
       sender: { name: 'Smart-Z', email: 'sasmarteez@gmail.com' },
@@ -149,6 +175,8 @@ Design ${index + 1} :
       subject: `Nouvelle commande - N°${orders[0].id}`,
       textContent: adminTextBody
     }
+
+    console.log('📤 Envoi des mails via Brevo...')
 
     // Envoi des mails via Brevo
     const [clientResponse, adminResponse] = await Promise.all([
@@ -175,6 +203,10 @@ Design ${index + 1} :
     if (!clientResponse.ok || !adminResponse.ok) {
       const clientError = await clientResponse.text()
       const adminError = await adminResponse.text()
+      console.error('❌ Erreur Brevo:', {
+        client: clientError,
+        admin: adminError
+      })
       return res.status(500).json({
         status: 'error',
         message: 'Erreur Brevo',
@@ -182,8 +214,10 @@ Design ${index + 1} :
       })
     }
 
+    console.log('✅ Mails envoyés avec succès')
     return res.status(200).json({ status: 'success' })
   } catch (error) {
+    console.error('❌ Erreur serveur:', error)
     return res.status(500).json({
       status: 'error',
       message: 'Erreur serveur',
