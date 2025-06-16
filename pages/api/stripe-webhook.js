@@ -3,6 +3,7 @@ import { db } from '../../utils/firebase-admin'
 import dotenv from 'dotenv'
 import path from 'path'
 import fs from 'fs'
+import { sendNewOrderMail } from './send-new-order-mail'
 
 dotenv.config()
 
@@ -226,24 +227,14 @@ export default async function handler(req, res) {
       // Envoi des mails de confirmation
       try {
         console.log("📧 Préparation de l'envoi des mails...")
-        const mailResponse = await fetch('/api/send-new-order-mail', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orders,
-            sessionId: session.id,
-            amountPaid: totalAmount,
-            promoCode: appliedPromo
-          })
+        await sendNewOrderMail({
+          orders,
+          sessionId: session.id,
+          amountPaid: totalAmount,
+          promoCode: appliedPromo
         })
 
-        if (!mailResponse.ok) {
-          const errorText = await mailResponse.text()
-          console.error("❌ Erreur lors de l'envoi des mails:", errorText)
-          // On continue malgré l'erreur car c'est non bloquant
-        } else {
-          console.log('✅ Mails de confirmation envoyés avec succès')
-        }
+        console.log('✅ Mails de confirmation envoyés avec succès')
       } catch (e) {
         console.error("❌ Erreur lors de l'envoi des mails:", e)
         // On continue malgré l'erreur car c'est non bloquant

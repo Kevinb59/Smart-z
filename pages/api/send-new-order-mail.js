@@ -1,117 +1,104 @@
-import dotenv from 'dotenv'
-dotenv.config()
+export async function sendNewOrderMail({
+  orders,
+  sessionId,
+  amountPaid,
+  promoCode
+}) {
+  console.log('📧 Début du traitement des mails')
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res
-      .status(405)
-      .json({ status: 'error', message: 'Méthode non autorisée' })
-  }
+  const clientEmail = orders[0].email
+  const firstName = orders[0].firstName
+  const lastName = orders[0].lastName
+  const logoUrl =
+    'https://raw.githubusercontent.com/Kevinb59/mon-formulaire-smarteez/refs/heads/main/Logo%20Smart-Z.jpg'
 
-  try {
-    console.log('📧 Début du traitement des mails')
-    const { orders, sessionId, amountPaid, promoCode } = req.body
+  // Construction du HTML pour le client
+  let designsHtml = ''
 
-    if (!orders || !Array.isArray(orders) || orders.length === 0) {
-      console.error('❌ Données de commande invalides:', orders)
-      return res
-        .status(400)
-        .json({ status: 'error', message: 'Données de commande invalides' })
-    }
+  orders.forEach((order, index) => {
+    const phonesList = order.phones
+      ? order.phones.map((p) => `<li>${p}</li>`).join('')
+      : ''
 
-    const clientEmail = orders[0].email
-    const firstName = orders[0].firstName
-    const lastName = orders[0].lastName
-    const logoUrl =
-      'https://raw.githubusercontent.com/Kevinb59/mon-formulaire-smarteez/refs/heads/main/Logo%20Smart-Z.jpg'
+    designsHtml += `
+      <div style="background-color:#ffffff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); padding:15px; margin-bottom:20px;">
+        <h3 style="color:#5a2d82;">Design ${index + 1} :</h3>
 
-    // Construction du HTML pour le client
-    let designsHtml = ''
-
-    orders.forEach((order, index) => {
-      const phonesList = order.phones
-        ? order.phones.map((p) => `<li>${p}</li>`).join('')
-        : ''
-
-      designsHtml += `
-        <div style="background-color:#ffffff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); padding:15px; margin-bottom:20px;">
-          <h3 style="color:#5a2d82;">Design ${index + 1} :</h3>
-
-          <div style="margin-bottom:15px;">
-            <h4 style="color:#5a2d82;">Téléphone(s) :</h4>
-            <ul style="padding-left:20px; color:#333;">${phonesList}</ul>
-          </div>
-
-          <div style="margin-bottom:15px;">
-            <h4 style="color:#5a2d82;">Détails :</h4>
-            ${
-              order.customText
-                ? `<p><strong>Texte personnalisé :</strong> ${order.customText}</p>`
-                : ''
-            }
-            ${
-              order.fontChoice
-                ? `<p><strong>Police :</strong> ${order.fontChoice}</p>`
-                : ''
-            }
-            <p><strong>Quantité :</strong> ${order.quantity}</p>
-          </div>
-
-          <div style="margin-bottom:15px;">
-            <h4 style="color:#5a2d82;">Image personnalisée :</h4>
-            <div style="text-align:center;">
-              <img src="${
-                order.imageUrl
-              }" style="max-width:300px; border:1px solid #ccc; padding:5px; border-radius:5px;">
-            </div>
-          </div>
-        </div>
-      `
-    })
-
-    const clientHtmlBody = `
-    <div style="background-color:#a5c799; padding:20px; font-family:Arial,sans-serif;">
-      <div style="max-width:600px; margin:0 auto; background-color:#ffffff; padding:20px; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.1);">
-        <img src="${logoUrl}" style="display:block; margin:0 auto; width:150px; height:auto;" alt="Logo Smart-Z">
-        <h2 style="color:#5a2d82; text-align:center;">Bonjour ${firstName} ${lastName},</h2>
-        <p style="color:#5a2d82; text-align:center; font-size:16px;">Nous avons bien reçu votre commande !</p>
-
-        <div style="background-color:#2ecc71; color:white; padding:10px 20px; border-radius:25px; text-align:center; font-weight:bold; font-size:16px; margin:20px auto;">
-          🎉 Commande confirmée
+        <div style="margin-bottom:15px;">
+          <h4 style="color:#5a2d82;">Téléphone(s) :</h4>
+          <ul style="padding-left:20px; color:#333;">${phonesList}</ul>
         </div>
 
-        ${designsHtml}
-
-        <div style="margin-bottom:20px;">
-          <h3 style="color:#5a2d82;">Coordonnées :</h3>
-          <p>${orders[0].address}${
-      orders[0].address2 ? ', ' + orders[0].address2 : ''
-    }</p>
-          <p>${orders[0].zipCode} ${orders[0].city}</p>
-          <p>Email : ${orders[0].email}</p>
-          <p>Téléphone : ${orders[0].phone}</p>
-        </div>
-
-        <div style="margin-bottom:20px;">
-          <h3 style="color:#5a2d82;">Détails de la commande :</h3>
-          <p><strong>Numéro de commande :</strong> ${orders[0].id}</p>
-          <p><strong>Montant total :</strong> ${(amountPaid / 100).toFixed(
-            2
-          )} €</p>
+        <div style="margin-bottom:15px;">
+          <h4 style="color:#5a2d82;">Détails :</h4>
           ${
-            promoCode
-              ? `<p><strong>Code promo utilisé :</strong> ${promoCode}</p>`
+            order.customText
+              ? `<p><strong>Texte personnalisé :</strong> ${order.customText}</p>`
               : ''
           }
+          ${
+            order.fontChoice
+              ? `<p><strong>Police :</strong> ${order.fontChoice}</p>`
+              : ''
+          }
+          <p><strong>Quantité :</strong> ${order.quantity}</p>
         </div>
 
-        <p style="text-align:center; margin-top:20px;">Nous vous tiendrons informé de l'avancement de votre commande.</p>
-        <p style="text-align:center; font-weight:bold;">Merci de votre confiance,<br>Smart-Z</p>
+        <div style="margin-bottom:15px;">
+          <h4 style="color:#5a2d82;">Image personnalisée :</h4>
+          <div style="text-align:center;">
+            <img src="${
+              order.imageUrl
+            }" style="max-width:300px; border:1px solid #ccc; padding:5px; border-radius:5px;">
+          </div>
+        </div>
       </div>
-    </div>`
+    `
+  })
 
-    // Construction du mail admin (texte brut)
-    const adminTextBody = `
+  const clientHtmlBody = `
+  <div style="background-color:#a5c799; padding:20px; font-family:Arial,sans-serif;">
+    <div style="max-width:600px; margin:0 auto; background-color:#ffffff; padding:20px; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.1);">
+      <img src="${logoUrl}" style="display:block; margin:0 auto; width:150px; height:auto;" alt="Logo Smart-Z">
+      <h2 style="color:#5a2d82; text-align:center;">Bonjour ${firstName} ${lastName},</h2>
+      <p style="color:#5a2d82; text-align:center; font-size:16px;">Nous avons bien reçu votre commande !</p>
+
+      <div style="background-color:#2ecc71; color:white; padding:10px 20px; border-radius:25px; text-align:center; font-weight:bold; font-size:16px; margin:20px auto;">
+        🎉 Commande confirmée
+      </div>
+
+      ${designsHtml}
+
+      <div style="margin-bottom:20px;">
+        <h3 style="color:#5a2d82;">Coordonnées :</h3>
+        <p>${orders[0].address}${
+    orders[0].address2 ? ', ' + orders[0].address2 : ''
+  }</p>
+        <p>${orders[0].zipCode} ${orders[0].city}</p>
+        <p>Email : ${orders[0].email}</p>
+        <p>Téléphone : ${orders[0].phone}</p>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <h3 style="color:#5a2d82;">Détails de la commande :</h3>
+        <p><strong>Numéro de commande :</strong> ${orders[0].id}</p>
+        <p><strong>Montant total :</strong> ${(amountPaid / 100).toFixed(
+          2
+        )} €</p>
+        ${
+          promoCode
+            ? `<p><strong>Code promo utilisé :</strong> ${promoCode}</p>`
+            : ''
+        }
+      </div>
+
+      <p style="text-align:center; margin-top:20px;">Nous vous tiendrons informé de l'avancement de votre commande.</p>
+      <p style="text-align:center; font-weight:bold;">Merci de votre confiance,<br>Smart-Z</p>
+    </div>
+  </div>`
+
+  // Construction du mail admin (texte brut)
+  const adminTextBody = `
 Nouvelle commande reçue !
 
 Numéro de commande : ${orders[0].id}
@@ -141,68 +128,52 @@ Design ${index + 1} :
   .join('\n')}
 `
 
-    if (!process.env.BREVO_API_KEY) {
-      console.error('❌ BREVO_API_KEY manquante')
-      return res
-        .status(500)
-        .json({ status: 'error', message: 'Configuration Brevo manquante' })
-    }
-
-    console.log('📤 Envoi des mails via Brevo...')
-
-    // Construction des payloads Brevo
-    const brevoEndpoint = 'https://api.brevo.com/v3/smtp/email'
-    const headers = {
-      accept: 'application/json',
-      'api-key': process.env.BREVO_API_KEY,
-      'content-type': 'application/json'
-    }
-
-    const [clientResponse, adminResponse] = await Promise.all([
-      fetch(brevoEndpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          sender: { name: 'Smart-Z', email: 'sasmarteez@gmail.com' },
-          to: [{ email: clientEmail }],
-          subject: `Confirmation de votre commande - N°${orders[0].id}`,
-          htmlContent: clientHtmlBody
-        })
-      }),
-      fetch(brevoEndpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          sender: { name: 'Smart-Z', email: 'sasmarteez@gmail.com' },
-          to: [{ email: 'sasmarteez@gmail.com' }],
-          subject: `Nouvelle commande - N°${orders[0].id}`,
-          textContent: adminTextBody
-        })
-      })
-    ])
-
-    if (!clientResponse.ok || !adminResponse.ok) {
-      const clientError = await clientResponse.text()
-      const adminError = await adminResponse.text()
-      console.error('❌ Erreur Brevo:', {
-        client: clientError,
-        admin: adminError
-      })
-      return res.status(500).json({
-        status: 'error',
-        message: 'Erreur Brevo',
-        details: { client: clientError, admin: adminError }
-      })
-    }
-
-    console.log('✅ Mails envoyés avec succès')
-    return res.status(200).json({ status: 'success' })
-  } catch (error) {
-    console.error('❌ Erreur serveur:', error)
-    return res.status(500).json({
-      status: 'error',
-      message: 'Erreur serveur',
-      details: error.toString()
-    })
+  if (!process.env.BREVO_API_KEY) {
+    console.error('❌ BREVO_API_KEY manquante')
+    throw new Error('Configuration Brevo manquante')
   }
+
+  console.log('📤 Envoi des mails via Brevo...')
+
+  const brevoEndpoint = 'https://api.brevo.com/v3/smtp/email'
+  const headers = {
+    accept: 'application/json',
+    'api-key': process.env.BREVO_API_KEY,
+    'content-type': 'application/json'
+  }
+
+  const [clientResponse, adminResponse] = await Promise.all([
+    fetch(brevoEndpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        sender: { name: 'Smart-Z', email: 'sasmarteez@gmail.com' },
+        to: [{ email: clientEmail }],
+        subject: `Confirmation de votre commande - N°${orders[0].id}`,
+        htmlContent: clientHtmlBody
+      })
+    }),
+    fetch(brevoEndpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        sender: { name: 'Smart-Z', email: 'sasmarteez@gmail.com' },
+        to: [{ email: 'sasmarteez@gmail.com' }],
+        subject: `Nouvelle commande - N°${orders[0].id}`,
+        textContent: adminTextBody
+      })
+    })
+  ])
+
+  if (!clientResponse.ok || !adminResponse.ok) {
+    const clientError = await clientResponse.text()
+    const adminError = await adminResponse.text()
+    console.error('❌ Erreur Brevo:', {
+      client: clientError,
+      admin: adminError
+    })
+    throw new Error('Erreur Brevo')
+  }
+
+  console.log('✅ Mails envoyés avec succès')
 }
