@@ -223,11 +223,11 @@ export default async function handler(req, res) {
         console.log('✅ Code promo mis à jour dans les commandes')
       }
 
-      // Envoi à Google Apps Script (optionnel et silencieux)
-      const GAS_URL = process.env.GAS_URL_NEW_ORDER
-      if (GAS_URL && GAS_URL.startsWith('http')) {
-        try {
-          await fetch(GAS_URL, {
+      // Envoi des mails de confirmation
+      try {
+        const mailResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/send-new-order-mail`,
+          {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -236,11 +236,19 @@ export default async function handler(req, res) {
               amountPaid: totalAmount,
               promoCode: appliedPromo
             })
-          })
-          console.log('✅ Notification GAS envoyée')
-        } catch (e) {
-          console.warn('⚠️ Envoi à GAS échoué (non bloquant):', e)
+          }
+        )
+
+        if (!mailResponse.ok) {
+          console.warn(
+            '⚠️ Envoi des mails échoué (non bloquant):',
+            await mailResponse.text()
+          )
+        } else {
+          console.log('✅ Mails de confirmation envoyés')
         }
+      } catch (e) {
+        console.warn('⚠️ Envoi des mails échoué (non bloquant):', e)
       }
 
       return res
