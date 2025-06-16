@@ -16,9 +16,15 @@ export async function sendNewOrderMail({
   let designsHtml = ''
 
   orders.forEach((order, index) => {
-    const phonesList = Array.isArray(order.phones)
-      ? order.phones.map((p) => `<li>${p}</li>`).join('')
-      : `<li>${order.phones}</li>`
+    // Gestion des téléphones (string ou array)
+    let phonesList = ''
+    if (typeof order.phones === 'string') {
+      phonesList = `<li>${order.phones}</li>`
+    } else if (Array.isArray(order.phones)) {
+      phonesList = order.phones.map((p) => `<li>${p}</li>`).join('')
+    } else {
+      phonesList = '<li>Non renseigné</li>'
+    }
 
     designsHtml += `
       <div style="background-color:#ffffff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); padding:15px; margin-bottom:20px;">
@@ -118,7 +124,13 @@ ${orders
   .map(
     (order, index) => `
 Design ${index + 1} :
-- Téléphones : ${order.phones?.join(', ') ?? 'Non renseigné'}
+- Téléphones : ${
+      typeof order.phones === 'string'
+        ? order.phones
+        : Array.isArray(order.phones)
+        ? order.phones.join(', ')
+        : 'Non renseigné'
+    }
 - Texte personnalisé : ${order.customText || 'Non'}
 - Police : ${order.fontChoice || 'Non'}
 - Quantité : ${order.quantity}
