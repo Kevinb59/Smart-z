@@ -225,19 +225,16 @@ export default async function handler(req, res) {
 
       // Envoi des mails de confirmation
       try {
-        const mailResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL}/api/send-new-order-mail`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              orders,
-              sessionId: session.id,
-              amountPaid: totalAmount,
-              promoCode: appliedPromo
-            })
-          }
-        )
+        const mailResponse = await fetch('/api/send-new-order-mail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orders,
+            sessionId: session.id,
+            amountPaid: totalAmount,
+            promoCode: appliedPromo
+          })
+        })
 
         if (!mailResponse.ok) {
           console.warn(
