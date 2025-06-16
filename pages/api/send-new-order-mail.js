@@ -1,3 +1,6 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res
@@ -196,12 +199,10 @@ Design ${index + 1} :
     return res.status(200).json({ status: 'success' })
   } catch (error) {
     console.error('❌ Erreur serveur:', error)
-    return res
-      .status(500)
-      .json({
-        status: 'error',
-        message: 'Erreur serveur',
-        details: error.toString()
-      })
+    return res.status(500).json({
+      status: 'error',
+      message: 'Erreur serveur',
+      details: error.toString()
+    })
   }
 }
