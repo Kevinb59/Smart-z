@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { db } from '../../utils/firebase-admin'
+import { db } from '../../lib/firebase-admin'
 import dotenv from 'dotenv'
 import path from 'path'
 import fs from 'fs'
@@ -37,19 +37,6 @@ function clean(obj) {
     }
   }
   return copy
-}
-
-// Vérifie si un code promo est actif
-function isPromoCodeActive(code) {
-  try {
-    const promoPath = path.resolve(process.cwd(), 'api/data/promo-codes.json')
-    const raw = fs.readFileSync(promoPath, 'utf-8')
-    const promoCodes = JSON.parse(raw)
-    return promoCodes[code]?.active === true
-  } catch (err) {
-    console.error('Erreur lecture promo-codes.json :', err)
-    return false
-  }
 }
 
 export default async function handler(req, res) {

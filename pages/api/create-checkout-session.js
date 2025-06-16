@@ -59,8 +59,8 @@ export default async function handler(req, res) {
       line_items,
       mode: 'payment',
       allow_promotion_codes: true,
-      success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/cancel`,
+      success_url: `${req.headers.origin}/success.html`,
+      cancel_url: `${req.headers.origin}/cancel.html`,
       customer_email: email,
       metadata
     })
