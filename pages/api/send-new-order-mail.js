@@ -11,15 +11,14 @@ export async function sendNewOrderMail({
   const lastName = orders[0].lastName
   const logoUrl =
     'https://raw.githubusercontent.com/Kevinb59/mon-formulaire-smarteez/refs/heads/main/Logo%20Smart-Z.jpg'
+  const baseOrderId = orders[0].id.split('-')[0] // On récupère A004 depuis A004-1
 
-  // Construction du HTML pour le client
+  // Construction du HTML client
   let designsHtml = ''
-
   orders.forEach((order, index) => {
-    // Gestion des téléphones (string ou array)
     let phonesList = ''
     if (typeof order.phones === 'string') {
-      phonesList = `<li>${order.phones}</li>`
+      phonesList = `<li>${order.phones.replace(/;/g, ' - ')}</li>`
     } else if (Array.isArray(order.phones)) {
       phonesList = order.phones.map((p) => `<li>${p}</li>`).join('')
     } else {
@@ -28,7 +27,7 @@ export async function sendNewOrderMail({
 
     designsHtml += `
       <div style="background-color:#ffffff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); padding:15px; margin-bottom:20px;">
-        <h3 style="color:#5a2d82;">Design ${index + 1} :</h3>
+        <h3 style="color:#5a2d82;">Design ${index + 1} (${order.id}) :</h3>
 
         <div style="margin-bottom:15px;">
           <h4 style="color:#5a2d82;">Téléphone(s) :</h4>
@@ -58,8 +57,7 @@ export async function sendNewOrderMail({
             }" style="max-width:300px; border:1px solid #ccc; padding:5px; border-radius:5px;">
           </div>
         </div>
-      </div>
-    `
+      </div>`
   })
 
   const clientHtmlBody = `
@@ -87,7 +85,7 @@ export async function sendNewOrderMail({
 
       <div style="margin-bottom:20px;">
         <h3 style="color:#5a2d82;">Détails de la commande :</h3>
-        <p><strong>Numéro de commande :</strong> ${orders[0].id}</p>
+        <p><strong>Numéro de commande :</strong> ${baseOrderId}</p>
         <p><strong>Montant total :</strong> ${(amountPaid / 100).toFixed(
           2
         )} €</p>
@@ -103,16 +101,7 @@ export async function sendNewOrderMail({
     </div>
   </div>`
 
-  // Construction du mail admin (texte brut)
   const adminTextBody = `
-Nouvelle commande reçue !
-
-Numéro de commande : ${orders[0].id}
-Session Stripe : ${sessionId}
-Montant total : ${(amountPaid / 100).toFixed(2)} €
-${promoCode ? `Code promo utilisé : ${promoCode}` : ''}
-
-Client :
 ${firstName} ${lastName}
 ${orders[0].address}${orders[0].address2 ? ', ' + orders[0].address2 : ''}
 ${orders[0].zipCode} ${orders[0].city}
@@ -123,10 +112,10 @@ Designs commandés :
 ${orders
   .map(
     (order, index) => `
-Design ${index + 1} :
+Design ${index + 1} (${order.id}) :
 - Téléphones : ${
       typeof order.phones === 'string'
-        ? order.phones
+        ? order.phones.replace(/;/g, ' - ')
         : Array.isArray(order.phones)
         ? order.phones.join(', ')
         : 'Non renseigné'
@@ -138,6 +127,10 @@ Design ${index + 1} :
 `
   )
   .join('\n')}
+
+Session Stripe : ${sessionId}
+Montant total : ${(amountPaid / 100).toFixed(2)} €
+${promoCode ? `Code promo utilisé : ${promoCode}` : ''}
 `
 
   if (!process.env.BREVO_API_KEY) {
@@ -161,7 +154,7 @@ Design ${index + 1} :
       body: JSON.stringify({
         sender: { name: 'Smart-Z', email: 'sasmarteez@gmail.com' },
         to: [{ email: clientEmail }],
-        subject: `Confirmation de votre commande - N°${orders[0].id}`,
+        subject: `Confirmation de votre commande - N°${baseOrderId}`,
         htmlContent: clientHtmlBody
       })
     }),
@@ -171,7 +164,7 @@ Design ${index + 1} :
       body: JSON.stringify({
         sender: { name: 'Smart-Z', email: 'sasmarteez@gmail.com' },
         to: [{ email: 'sasmarteez@gmail.com' }],
-        subject: `Nouvelle commande - N°${orders[0].id}`,
+        subject: `Nouvelle commande - N°${baseOrderId}`,
         textContent: adminTextBody
       })
     })
