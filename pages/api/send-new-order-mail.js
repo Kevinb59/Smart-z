@@ -16,9 +16,9 @@ export async function sendNewOrderMail({
   let designsHtml = ''
 
   orders.forEach((order, index) => {
-    const phonesList = order.phones
+    const phonesList = Array.isArray(order.phones)
       ? order.phones.map((p) => `<li>${p}</li>`).join('')
-      : ''
+      : `<li>${order.phones}</li>`
 
     designsHtml += `
       <div style="background-color:#ffffff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); padding:15px; margin-bottom:20px;">
