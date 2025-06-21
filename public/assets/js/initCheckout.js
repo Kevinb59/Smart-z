@@ -127,78 +127,84 @@ document.addEventListener('DOMContentLoaded', function () {
       return
     }
 
-    // 📦 Données client à transmettre
-    const data = {
-      firstName: document.getElementById('firstName').value.trim(),
-      lastName: document.getElementById('lastName').value.trim(),
-      email: document.getElementById('email').value.trim(),
-      phone: document.getElementById('phone').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      address2: document.getElementById('address2').value.trim(),
-      city: document.getElementById('city').value.trim(),
-      zipCode: document.getElementById('zipCode').value.trim(),
-      designs: [] // Contiendra tous les designs (téléphones + image + texte + quantité)
+    // Afficher le loader
+    const loader = document.getElementById('paymentLoader')
+    if (loader) {
+      loader.classList.add('show')
     }
 
-    // 🔁 Récupération de tous les blocs design
-    const designForms = document.querySelectorAll('.productForm')
-    const cloudName = 'dwjkmwlyb'
-    const uploadPreset = 'smarteez_orders'
-
-    for (const form of designForms) {
-      // 📱 Liste des téléphones dans ce design
-      const phoneSelects = form.querySelectorAll('.phoneBrand, .phoneModel')
-      const phones = []
-
-      for (let i = 0; i < phoneSelects.length; i += 2) {
-        const brand = phoneSelects[i].value.trim()
-        const model = phoneSelects[i + 1].value.trim()
-        if (brand && model) phones.push(`${brand} ${model}`)
-      }
-
-      // 🖼️ Image du design
-      const imageInput = form.querySelector('.imageUpload')
-      const file = imageInput?.files[0]
-
-      // ☁️ Upload de l'image vers Cloudinary
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('upload_preset', uploadPreset)
-
-      let cloudRes, cloudData
-      try {
-        cloudRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
-          {
-            method: 'POST',
-            body: formData
-          }
-        )
-        cloudData = await cloudRes.json()
-      } catch (err) {
-        console.error('Erreur Cloudinary :', err)
-        alert("Erreur lors de l'envoi de l'image.")
-        return
-      }
-
-      if (!cloudData.secure_url) {
-        console.error('Échec upload :', cloudData)
-        alert("Erreur lors de l'envoi de l'image.")
-        return
-      }
-
-      // 📝 Ajout du design dans la liste finale
-      data.designs.push({
-        phones: phones.join('; '), // Exemple : "Redmi Note 12; iPhone 16"
-        imageUrl: cloudData.secure_url,
-        customText: form.querySelector('#customText')?.value.trim() || '',
-        fontChoice: form.querySelector('#fontChoice')?.value.trim() || '',
-        quantity: form.querySelector('#quantity')?.value.trim() || '1'
-      })
-    }
-
-    // 📤 Envoi des données vers le serveur backend (/api/create-checkout-session)
     try {
+      // 📦 Données client à transmettre
+      const data = {
+        firstName: document.getElementById('firstName').value.trim(),
+        lastName: document.getElementById('lastName').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        address2: document.getElementById('address2').value.trim(),
+        city: document.getElementById('city').value.trim(),
+        zipCode: document.getElementById('zipCode').value.trim(),
+        designs: [] // Contiendra tous les designs (téléphones + image + texte + quantité)
+      }
+
+      // 🔁 Récupération de tous les blocs design
+      const designForms = document.querySelectorAll('.productForm')
+      const cloudName = 'dwjkmwlyb'
+      const uploadPreset = 'smarteez_orders'
+
+      for (const form of designForms) {
+        // 📱 Liste des téléphones dans ce design
+        const phoneSelects = form.querySelectorAll('.phoneBrand, .phoneModel')
+        const phones = []
+
+        for (let i = 0; i < phoneSelects.length; i += 2) {
+          const brand = phoneSelects[i].value.trim()
+          const model = phoneSelects[i + 1].value.trim()
+          if (brand && model) phones.push(`${brand} ${model}`)
+        }
+
+        // 🖼️ Image du design
+        const imageInput = form.querySelector('.imageUpload')
+        const file = imageInput?.files[0]
+
+        // ☁️ Upload de l'image vers Cloudinary
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('upload_preset', uploadPreset)
+
+        let cloudRes, cloudData
+        try {
+          cloudRes = await fetch(
+            `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
+            {
+              method: 'POST',
+              body: formData
+            }
+          )
+          cloudData = await cloudRes.json()
+        } catch (err) {
+          console.error('Erreur Cloudinary :', err)
+          alert("Erreur lors de l'envoi de l'image.")
+          return
+        }
+
+        if (!cloudData.secure_url) {
+          console.error('Échec upload :', cloudData)
+          alert("Erreur lors de l'envoi de l'image.")
+          return
+        }
+
+        // 📝 Ajout du design dans la liste finale
+        data.designs.push({
+          phones: phones.join('; '), // Exemple : "Redmi Note 12; iPhone 16"
+          imageUrl: cloudData.secure_url,
+          customText: form.querySelector('#customText')?.value.trim() || '',
+          fontChoice: form.querySelector('#fontChoice')?.value.trim() || '',
+          quantity: form.querySelector('#quantity')?.value.trim() || '1'
+        })
+      }
+
+      // 📤 Envoi des données vers le serveur backend (/api/create-checkout-session)
       const stripeRes = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -208,6 +214,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const stripeData = await stripeRes.json()
       if (!stripeData.id) {
         console.error('Erreur Stripe:', stripeData)
+        if (loader) loader.classList.remove('show')
         alert('Erreur lors de la redirection vers le paiement.')
         return
       }
@@ -219,6 +226,7 @@ document.addEventListener('DOMContentLoaded', function () {
       await stripe.redirectToCheckout({ sessionId: stripeData.id })
     } catch (error) {
       console.error('Erreur globale :', error)
+      if (loader) loader.classList.remove('show')
       alert('Une erreur est survenue. Merci de réessayer.')
     }
   })

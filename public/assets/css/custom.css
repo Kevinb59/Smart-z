@@ -283,6 +283,7 @@
   transition: background-color 0.3s;
   color: #757575;
   position: relative;
+  font-weight: 600;
   min-height: 140px;
   text-align: center;
 }
@@ -295,6 +296,7 @@
   font-size: 2.5em;
   margin-bottom: 0.5em;
   color: #757575;
+  font-weight: 600;
 }
 
 .upload-label span {
@@ -422,6 +424,17 @@ header h6 {
 
 textarea {
   resize: vertical;
+}
+
+/* =========================================================================================================
+   S E L E C T   F I E L D S
+   ========================================================================================================= */
+
+select.phoneBrand,
+select.phoneModel,
+select#fontChoice {
+  font-weight: 600;
+  color: #757575;
 }
 
 /* =========================================================================================================
@@ -726,4 +739,73 @@ textarea {
 .button-group {
   display: flex;
   gap: 15px; /* ou 10px, à adapter selon ton besoin */
+}
+
+/* =========================================================================================================
+   L O A D E R   P A Y E M E N T
+   ========================================================================================================= */
+
+.loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  display: flex;
+  flex-direction: column; /* Pour empiler le loader et le texte */
+  justify-content: center;
+  align-items: center;
+}
+
+.loader-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loader-text {
+  color: white;
+  margin-top: 1.5em;
+  font-weight: 600;
+  font-size: 1.1em;
+  text-align: center;
+}
+
+/* From Uiverse.io by gsperandio, adapted for Smart-Z */
+.loader {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: inline-block;
+  border-top: 4px solid #551f7e; /* Violet Smart-Z */
+  border-right: 4px solid transparent;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+.loader::after {
+  content: '';
+  box-sizing: border-box;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border-left: 4px solid #3cb54a; /* Vert Smart-Z */
+  border-bottom: 4px solid transparent;
+  animation: rotation 0.5s linear infinite reverse;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
