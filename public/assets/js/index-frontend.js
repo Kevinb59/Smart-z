@@ -349,6 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
         phonesContainer.appendChild(newBrandDiv)
         phonesContainer.appendChild(newModelDiv)
 
+        // Initialisation dynamique du couple marque/modèle
         if (typeof window.initPhoneBrandAndModel === 'function') {
           window.initPhoneBrandAndModel(
             newBrandDiv.querySelector('select'),
@@ -505,3 +506,37 @@ document.addEventListener('DOMContentLoaded', function () {
   chargerMarquesEtModeles()
   afficherPromoEtEcard()
 })
+
+// Fonction utilitaire pour initialiser un couple marque/modèle dynamiquement
+function initPhoneBrandAndModel(brandSelect, modelSelect) {
+  if (!brandSelect || !modelSelect) return
+  // Remplir les marques si vide
+  if (brandSelect.options.length <= 1 && window.brandsData) {
+    brandSelect.innerHTML = '<option value="">Marque</option>'
+    Object.keys(window.brandsData).forEach((brand) => {
+      const option = document.createElement('option')
+      option.value = brand
+      option.textContent = brand
+      brandSelect.appendChild(option)
+    })
+  }
+  // Reset modèle
+  modelSelect.innerHTML = '<option value="">Modèle</option>'
+  modelSelect.disabled = true
+  // Supprimer anciens listeners
+  brandSelect.onchange = null
+  // Ajouter le listener
+  brandSelect.addEventListener('change', () => {
+    const selectedBrand = brandSelect.value
+    const models = window.brandsData[selectedBrand] || []
+    modelSelect.innerHTML = '<option value="">Modèle</option>'
+    models.forEach((model) => {
+      const option = document.createElement('option')
+      option.value = model
+      option.textContent = model
+      modelSelect.appendChild(option)
+    })
+    modelSelect.disabled = false
+  })
+}
+window.initPhoneBrandAndModel = initPhoneBrandAndModel

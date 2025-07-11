@@ -207,17 +207,17 @@ function remplirPromoSelect(promos) {
   const seen = new Set()
 
   promos.forEach((p) => {
-    if (p.coupon && p.coupon.name && !seen.has(p.coupon.name)) {
-      uniqueCoupons.push(p.coupon)
-      seen.add(p.coupon.name)
+    if (p.coupon && p.coupon.name && !seen.has(p.promotion_code.code)) {
+      uniqueCoupons.push(p)
+      seen.add(p.promotion_code.code)
     }
   })
 
-  uniqueCoupons.forEach((coupon) => {
+  uniqueCoupons.forEach((p) => {
     const opt = document.createElement('option')
-    opt.value = coupon.name
-    opt.textContent = coupon.name
-    select.appendChild(opt) // Ajoute l'option au sélecteur
+    opt.value = p.promotion_code.code
+    opt.textContent = p.coupon.name
+    select.appendChild(opt)
   })
 
   // Écouteur d'événement pour le changement de sélection
@@ -227,7 +227,7 @@ function remplirPromoSelect(promos) {
       document.getElementById('promoCode').value = ''
       return
     }
-    const found = lastPromos.find((p) => p.coupon.name === val)
+    const found = lastPromos.find((p) => p.promotion_code.code === val)
     document.getElementById('promoCode').value = found
       ? found.promotion_code.code
       : ''
@@ -284,9 +284,16 @@ async function loadPromoAdmin() {
 
   // Pré-remplir les champs avec la bannière Firestore
   const select = document.getElementById('promoSelect')
-  select.value = banner && banner.code ? banner.code : ''
-  document.getElementById('promoCode').value =
-    banner && banner.code ? banner.code : ''
+  if (banner && banner.code) {
+    select.value = banner.code
+    const found = promos.find((p) => p.promotion_code.code === banner.code)
+    document.getElementById('promoCode').value = found
+      ? found.promotion_code.code
+      : ''
+  } else {
+    select.value = ''
+    document.getElementById('promoCode').value = ''
+  }
   document.getElementById('promoMessage').value =
     banner && banner.message ? banner.message : ''
   document.getElementById('promoToggle').checked = !!(banner && banner.show)
